@@ -3,22 +3,24 @@ import { M, esc, uniq, inter } from '../core/utils.js';
 import { S } from '../core/state.js';
 import { CONFIG } from '../core/config.js';
 import { evaluar } from '../core/engine.js';
+import { configEfectiva, normalizarAjustes } from '../core/storage.js';
 import { radar, calRow } from './charts.js';
 
 export function viewDashboard(){
-  const f=S.farm,R=evaluar(f),mods=R.mods;
-  if(!mods.length)return `<section class="panel"><h2>No hay módulos activos</h2><p class="muted">Activa al menos uno en src/core/config.js.</p></section>`;
+  const f=S.farm,R=evaluar(f,configEfectiva(normalizarAjustes(S.ajustes))),mods=R.mods;
+  if(!mods.length)return `<section class="panel"><h2>No hay módulos activos</h2><p class="muted">Activa al menos uno en Ajustes.</p></section>`;
   const top=[...mods].sort((a,b)=>b.score-a.score)[0];
   const hits=uniq([...R.ov1,...inter(f.fertMeses,f.lluviaMeses),...inter(f.sueloDesnudoMeses,f.lluviaMeses),...inter(R.amplio,R.plagaM)]);
   const recs=mods.filter(m=>m.level!=='Bajo'||m.recs.length).flatMap(m=>m.recs.map(r=>({m:m.nombre,lv:m.level,r}))).sort((a,b)=>({Alto:0,Medio:1,Bajo:2}[a.lv]-{Alto:0,Medio:1,Bajo:2}[b.lv]));
   const gg=f.gg!=='no';
   const allowed=Math.floor(Math.max(0,f.minorAplicables)*CONFIG.globalgap.margenMinorMusts);const remaining=allowed-f.minorFallas;
   return `
+  ${S.msg?`<div class="notice" role="status"><span>${esc(S.msg)}</span></div>`:''}
   ${S.demo?`<div class="notice"><span><b>Datos de ejemplo.</b> Esta finca es ficticia: los meses, dosis y especies sirven para mostrar cómo funciona la app, no son mediciones.</span><button class="btn small" data-act="start-empty">Empezar con mi finca</button></div>`:''}
   <section class="panel">
     <div class="row" style="justify-content:space-between">
       <div><p class="label">Finca</p><h1>${esc(f.nombre||'Finca sin nombre')}</h1><p class="muted">${esc(f.depto||'Sin departamento')} · ${f.area||0} ha · ${f.altitud||0} msnm · pendiente ${f.pendiente}</p></div>
-      <button class="btn" data-view="wizard">Editar respuestas</button>
+      <div class="row"><button class="btn" data-view="wizard">Editar respuestas</button><button class="btn" data-act="export">Exportar finca</button><button class="btn" data-act="import">Importar finca</button></div>
     </div>
     <div class="summary">
       <div><div class="k">Mayor riesgo</div><div class="v">${top.nombre} · ${top.score}</div></div>

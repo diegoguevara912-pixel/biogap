@@ -1,14 +1,23 @@
 // Punto de entrada: renderizado y eventos.
 import { uniq } from './core/utils.js';
-import { S, emptyFarm, blankDrafts } from './core/state.js';
+import { S, demoFarm, emptyFarm, blankDrafts } from './core/state.js';
+import { exportarTexto, importarTexto, guardarLocal, cargarLocal, configBase } from './core/storage.js';
 import { viewDashboard } from './ui/dashboard.js';
 import { viewWizard, STEPS } from './ui/wizard.js';
 import { viewTemplates } from './ui/templates.js';
+import { viewSettings } from './ui/settings.js';
+
+// Recupera la última finca guardada en este navegador.
+const previo = cargarLocal();
+if (previo) Object.assign(S, previo);
 
 function getRef(path){const p=path.split('.');let o=S;for(let i=0;i<p.length-1;i++)o=o[p[i]];return[o,p[p.length-1]];}
 function render(){
   const app=document.getElementById('app');
-  app.innerHTML=S.view==='dashboard'?viewDashboard():S.view==='wizard'?viewWizard():viewTemplates();
+  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,ajustes:viewSettings};
+  app.innerHTML=(views[S.view]||viewDashboard)();
+  S.msg='';
+  guardarLocal(S);
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===S.view?'page':'false'));
 }
 document.addEventListener('click',e=>{
@@ -28,6 +37,11 @@ document.addEventListener('click',e=>{
   else if(act==='add-plaga'){if(!S.draftPlaga.nombre.trim())return;f.plagas.push({...S.draftPlaga,meses:[...S.draftPlaga.meses]});S.draftPlaga=blankDrafts().draftPlaga;}
   else if(act==='add-cult'){if(!S.draftCult.nombre.trim())return;f.cultivos.push({...S.draftCult,ha:Number(S.draftCult.ha)||0,siembra:[...S.draftCult.siembra],cosecha:[...S.draftCult.cosecha]});S.draftCult=blankDrafts().draftCult;}
   else if(act==='add-nc'){if(!S.draftNC.criterio.trim())return;f.nc.push({criterio:S.draftNC.criterio,dias:Number(S.draftNC.dias)||0});S.draftNC=blankDrafts().draftNC;}
+  else if(act==='export'){descargar();return;}
+  else if(act==='import'){abrirArchivo();return;}
+  else if(act==='toggle-mod'){const id=a.dataset.id,on=S.ajustes.modulosActivos;S.ajustes.modulosActivos=on.includes(id)?on.filter(x=>x!==id):[...on,id];}
+  else if(act==='reset-ajustes'){S.ajustes=configBase();}
+  else if(act==='load-demo'){S.farm=demoFarm();S.demo=true;S.view='dashboard';S.msg='Se cargó la finca de ejemplo.';}
   else if(act==='rm-nc'){f.nc.splice(+a.dataset.i,1);}
   else if(act==='rm-row'){S.tpl.rows.splice(+a.dataset.i,1);}
   else if(act==='paste'){
@@ -41,5 +55,29 @@ function bindValue(el){const[o,k]=getRef(el.dataset.bind);
   if(el.type==='checkbox')o[k]=el.checked;else if(el.type==='number')o[k]=el.value===''?0:Number(el.value);else o[k]=el.value;}
 document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.bind)bindValue(e.target);});
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.bind)return;bindValue(el);
-  if(el.tagName==='SELECT'||el.type==='checkbox'||'rerender' in el.dataset){if(el.dataset.bind!=='draftEsp.atrae'&&el.dataset.bind!=='draftEsp.riesgo')render();}});
+  if(el.tagName==='SELECT'||el.type==='checkbox'||'rerender' in el.dataset){if(el.dataset.bind!=='draftEsp.atrae'&&el.dataset.bind!=='draftEsp.riesgo')queueMicrotask(render);}}); // diferido: el cambio puede llegar durante un blur
 render();
+
+// Exportar e importar la finca como archivo JSON.
+function nombreArchivo(){const base=(S.farm.nombre||'finca').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'finca';return `biogap-${base}.json`;}
+function descargar(){
+  const blob=new Blob([exportarTexto(S.farm,S.ajustes)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const link=document.createElement('a');
+  link.href=url;link.download=nombreArchivo();document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  S.msg=`Se descargó ${nombreArchivo()}.`;render();
+}
+function abrirArchivo(){
+  const input=document.createElement('input');input.type='file';input.accept='.json,application/json';
+  input.addEventListener('change',async()=>{
+    const file=input.files&&input.files[0];if(!file)return;
+    try{
+      if(file.size>2_000_000)throw new Error('El archivo es demasiado grande.');
+      const {farm,ajustes}=importarTexto(await file.text());
+      S.farm=farm;S.ajustes=ajustes;S.demo=false;S.view='dashboard';
+      S.msg=`Se importó la finca "${farm.nombre||'sin nombre'}".`;
+    }catch(err){S.msg=`No se pudo importar: ${err.message}`;}
+    render();
+  });
+  input.click();
+}

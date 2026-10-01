@@ -1,4 +1,5 @@
 // Estado de la app: finca de ejemplo, finca vacía y borradores de formularios.
+import { CONFIG } from './config.js';
 
 export function demoFarm() {
   return {
@@ -54,6 +55,9 @@ export const TPL = {
 // Estado global único de la app.
 export const S = {
   farm: demoFarm(), demo: true, view: 'dashboard', step: 0,
+  // Ajustes personalizables (módulos activos y umbrales). Viajan con la finca al exportar.
+  ajustes: { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } },
+  msg: '',
   ...blankDrafts(),
   tpl: {
     tipo: 'fert', objetivo: 150, paste: '',

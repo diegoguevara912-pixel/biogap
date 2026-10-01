@@ -1,0 +1,99 @@
+// Guardar y cargar fincas: archivo JSON (exportar/importar) y autoguardado en el navegador.
+// Todo lo que entra desde un archivo se valida campo por campo contra la finca vacía,
+// así un archivo viejo, incompleto o editado a mano nunca rompe la app.
+
+import { emptyFarm } from './state.js';
+import { CONFIG } from './config.js';
+import { MODULOS } from '../modules/index.js';
+
+export const FORMATO = 'biogap-finca';
+export const VERSION = 1;
+const CLAVE_LOCAL = 'biogap:v1';
+
+const esMes = (x) => Number.isInteger(x) && x >= 0 && x <= 11;
+const meses = (a) => (Array.isArray(a) ? [...new Set(a.filter(esMes))].sort((x, y) => x - y) : []);
+const num = (x, d = 0) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : d);
+const txt = (x, d = '') => (typeof x === 'string' ? x.slice(0, 200) : d);
+const opcion = (x, ops, d) => (ops.includes(x) ? x : d);
+const bool = (x) => x === true;
+const lista = (a, fn) => (Array.isArray(a) ? a.slice(0, 500).map(fn).filter(Boolean) : []);
+
+// Convierte cualquier objeto en una finca válida. Lo que no se reconoce se descarta.
+export function normalizarFinca(o) {
+  const v = emptyFarm();
+  if (!o || typeof o !== 'object') return v;
+  return {
+    nombre: txt(o.nombre), depto: txt(o.depto),
+    area: num(o.area), areaProd: num(o.areaProd), altitud: num(o.altitud),
+    pendiente: opcion(o.pendiente, ['plana', 'ondulada', 'fuerte'], v.pendiente),
+    fuenteAgua: txt(o.fuenteAgua), distAgua: num(o.distAgua, v.distAgua),
+    tieneCultivos: bool(o.tieneCultivos),
+    cultivos: lista(o.cultivos, (c) => c && { nombre: txt(c.nombre), ha: num(c.ha), siembra: meses(c.siembra), cosecha: meses(c.cosecha) }),
+    especies: lista(o.especies, (e) => e && {
+      nombre: txt(e.nombre),
+      tipo: opcion(e.tipo, ['Árbol', 'Arbusto', 'Maleza', 'Cultivo', 'Fauna'], 'Árbol'),
+      origen: opcion(e.origen, ['nativa', 'exótica', 'desconocido'], 'desconocido'),
+      floracion: meses(e.floracion), atrae: bool(e.atrae), riesgo: bool(e.riesgo),
+    }),
+    riego: opcion(o.riego, ['gravedad', 'aspersion', 'goteo', 'ninguno'], v.riego),
+    nAplicado: num(o.nAplicado), nObjetivo: num(o.nObjetivo),
+    fertMeses: meses(o.fertMeses), lluviaMeses: meses(o.lluviaMeses),
+    plaguicidas: lista(o.plaguicidas, (p) => p && { producto: txt(p.producto), clase: opcion(p.clase, ['amplio', 'selectivo', 'biologico'], 'amplio'), meses: meses(p.meses) }),
+    sueloDesnudoMeses: meses(o.sueloDesnudoMeses),
+    labranza: opcion(o.labranza, ['convencional', 'minima', 'cero'], v.labranza),
+    plagas: lista(o.plagas, (p) => p && { nombre: txt(p.nombre), meses: meses(p.meses), severidad: opcion(p.severidad, ['baja', 'media', 'alta'], 'media') }),
+    gg: opcion(o.gg, ['si', 'quiero', 'no'], v.gg),
+    minorAplicables: num(o.minorAplicables, v.minorAplicables), minorFallas: num(o.minorFallas),
+    nc: lista(o.nc, (n) => n && { criterio: txt(n.criterio), dias: num(n.dias) }),
+  };
+}
+
+// Solo la parte personalizable de la configuración viaja con la finca.
+export function configBase() {
+  return { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } };
+}
+
+export function normalizarAjustes(o) {
+  const base = configBase();
+  if (!o || typeof o !== 'object') return base;
+  const ids = MODULOS.map((m) => m.id);
+  const activos = Array.isArray(o.modulosActivos) ? ids.filter((id) => o.modulosActivos.includes(id)) : base.modulosActivos;
+  const alto = num(o.niveles?.alto, base.niveles.alto);
+  const medio = num(o.niveles?.medio, base.niveles.medio);
+  const valido = medio < alto && alto <= 100;
+  return { modulosActivos: activos, niveles: valido ? { alto, medio } : base.niveles };
+}
+
+// Configuración completa que usa el motor: la base fija más los ajustes del usuario.
+export const configEfectiva = (ajustes) => ({ ...CONFIG, ...ajustes });
+
+export function exportarTexto(farm, ajustes) {
+  return JSON.stringify({ formato: FORMATO, version: VERSION, guardado: new Date().toISOString(), finca: farm, ajustes }, null, 2);
+}
+
+// Devuelve { farm, ajustes } o lanza un Error con un mensaje para el usuario.
+export function importarTexto(texto) {
+  let o;
+  try { o = JSON.parse(texto); } catch { throw new Error('El archivo no es un JSON válido.'); }
+  if (!o || o.formato !== FORMATO) throw new Error('El archivo no es una finca de BioG.A.P.');
+  if (typeof o.version !== 'number' || o.version > VERSION) throw new Error('El archivo viene de una versión más nueva de la app.');
+  return { farm: normalizarFinca(o.finca), ajustes: normalizarAjustes(o.ajustes) };
+}
+
+// Autoguardado en el navegador. Falla en silencio si el navegador lo bloquea.
+export function guardarLocal(S) {
+  try { localStorage.setItem(CLAVE_LOCAL, JSON.stringify({ farm: S.farm, ajustes: S.ajustes, demo: S.demo })); } catch { /* sin almacenamiento */ }
+}
+
+export function cargarLocal() {
+  try {
+    const raw = localStorage.getItem(CLAVE_LOCAL);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    return { farm: normalizarFinca(o.farm), ajustes: normalizarAjustes(o.ajustes), demo: o.demo === true };
+  } catch { return null; }
+}
+
+export function borrarLocal() {
+  try { localStorage.removeItem(CLAVE_LOCAL); } catch { /* sin almacenamiento */ }
+}

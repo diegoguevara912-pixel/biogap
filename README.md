@@ -12,6 +12,10 @@ Nació del caso *Spathodea campanulata* y las abejas nativas sin aguijón. De ah
 2. **Dashboard** con el índice de riesgo (0-100) por módulo, el cruce de calendarios y las recomendaciones.
 3. **Plantillas** de registro (fertilización, riego, mecanización y personalizada) comparadas con el objetivo de la finca.
 4. **Panel GLOBALG.A.P.** con el margen de Minor Musts y las no conformidades abiertas.
+5. **Ajustes** para activar o desactivar módulos y mover los umbrales de riesgo.
+6. **Guardar y cargar**: autoguardado en el navegador y exportar o importar la finca como archivo `.json`.
+
+Los datos de la finca se guardan solo en el navegador del usuario. No se envían a ningún servidor.
 
 ## Cómo verla
 
@@ -33,11 +37,12 @@ src/
 │  ├─ config.js         ← PERSONALIZACIÓN: módulos activos, umbrales y factores
 │  ├─ engine.js         motor: Riesgo = 100 × P × E × V
 │  ├─ state.js          finca de ejemplo, finca vacía y plantillas
+│  ├─ storage.js        exportar/importar JSON con validación y autoguardado
 │  └─ utils.js
 ├─ modules/             un archivo por módulo de riesgo
 │  ├─ polinizadores.js  fertilizacion.js  agua.js  suelo.js  troficas.js
 │  └─ index.js          registro de módulos
-└─ ui/                  vistas: dashboard, cuestionario, plantillas y gráficos
+└─ ui/                  vistas: dashboard, cuestionario, plantillas, ajustes y gráficos
 docs/formulas.md        fórmula, supuestos y estado de calibración de cada módulo
 tests/                  pruebas del motor
 ```
@@ -52,7 +57,7 @@ tests/                  pruebas del motor
 ## Hoja de ruta
 
 - [x] v0.2: código dividido en módulos, configuración central y pruebas de regresión
-- [ ] Guardar y cargar fincas (exportar e importar JSON)
+- [x] v0.3: guardar y cargar fincas (JSON) y ajustes por finca (módulos activos y umbrales)
 - [ ] Perfiles de configuración por cultivo o exportador
 - [ ] Calibrar pesos con los datos de las tesis de Zamorano, cuando estén disponibles
 - [ ] **Memoria de casos (razonamiento basado en casos, k-NN):** sugerir acciones a partir de fincas parecidas ya evaluadas
