@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>BioG.A.P.</title>
+  <meta name="description" content="Prototipo de evaluación de riesgo ambiental de la finca, alineado a GLOBALG.A.P. IFA v6.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <header class="top"><div class="wrap bar">
+    <div class="brand">BioG.A.P.<small>Prototipo · riesgo ambiental de la finca</small></div>
+    <nav class="tabs" aria-label="Vistas">
+      <button data-view="dashboard" id="tab-dashboard">Dashboard</button>
+      <button data-view="wizard" id="tab-wizard">Cuestionario</button>
+      <button data-view="plantillas" id="tab-plantillas">Plantillas</button>
+    </nav>
+  </div></header>
+  <main class="wrap" id="app"></main>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

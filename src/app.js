@@ -1,0 +1,45 @@
+// Punto de entrada: renderizado y eventos.
+import { uniq } from './core/utils.js';
+import { S, emptyFarm, blankDrafts } from './core/state.js';
+import { viewDashboard } from './ui/dashboard.js';
+import { viewWizard, STEPS } from './ui/wizard.js';
+import { viewTemplates } from './ui/templates.js';
+
+function getRef(path){const p=path.split('.');let o=S;for(let i=0;i<p.length-1;i++)o=o[p[i]];return[o,p[p.length-1]];}
+function render(){
+  const app=document.getElementById('app');
+  app.innerHTML=S.view==='dashboard'?viewDashboard():S.view==='wizard'?viewWizard():viewTemplates();
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===S.view?'page':'false'));
+}
+document.addEventListener('click',e=>{
+  const v=e.target.closest('[data-view]');if(v){S.view=v.dataset.view;render();window.scrollTo(0,0);return;}
+  const mb=e.target.closest('[data-month]');if(mb){const[o,k]=getRef(mb.dataset.path);const i=+mb.dataset.month;o[k]=o[k].includes(i)?o[k].filter(x=>x!==i):uniq([...o[k],i]);render();return;}
+  const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,f=S.farm;
+  if(act==='next'){S.step=Math.min(STEPS.length-1,S.step+1);}
+  else if(act==='prev'){S.step=Math.max(0,S.step-1);}
+  else if(act==='finish'){S.view='dashboard';}
+  else if(act==='start-empty'){S.farm=emptyFarm();S.demo=false;S.view='wizard';S.step=0;}
+  else if(act==='cult-yes'){f.tieneCultivos=true;}
+  else if(act==='cult-no'){f.tieneCultivos=false;}
+  else if(act==='gg'){f.gg=a.dataset.v;}
+  else if(act==='rm'){f[a.dataset.list].splice(+a.dataset.i,1);}
+  else if(act==='add-esp'){if(!S.draftEsp.nombre.trim())return;f.especies.push({...S.draftEsp,floracion:[...S.draftEsp.floracion]});S.draftEsp=blankDrafts().draftEsp;}
+  else if(act==='add-plag'){if(!S.draftPlag.producto.trim())return;f.plaguicidas.push({...S.draftPlag,meses:[...S.draftPlag.meses]});S.draftPlag=blankDrafts().draftPlag;}
+  else if(act==='add-plaga'){if(!S.draftPlaga.nombre.trim())return;f.plagas.push({...S.draftPlaga,meses:[...S.draftPlaga.meses]});S.draftPlaga=blankDrafts().draftPlaga;}
+  else if(act==='add-cult'){if(!S.draftCult.nombre.trim())return;f.cultivos.push({...S.draftCult,ha:Number(S.draftCult.ha)||0,siembra:[...S.draftCult.siembra],cosecha:[...S.draftCult.cosecha]});S.draftCult=blankDrafts().draftCult;}
+  else if(act==='add-nc'){if(!S.draftNC.criterio.trim())return;f.nc.push({criterio:S.draftNC.criterio,dias:Number(S.draftNC.dias)||0});S.draftNC=blankDrafts().draftNC;}
+  else if(act==='rm-nc'){f.nc.splice(+a.dataset.i,1);}
+  else if(act==='rm-row'){S.tpl.rows.splice(+a.dataset.i,1);}
+  else if(act==='paste'){
+    const lines=S.tpl.paste.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);let ok=0,bad=0;
+    lines.forEach(l=>{const c=l.split(/\t|;|,/).map(x=>x.trim());const val=Number((c[2]||'').replace(',','.'));if(c.length>=3&&!isNaN(val)){S.tpl.rows.push({fecha:c[0],lote:c[1],valor:val});ok++;}else bad++;});
+    S.tpl.paste='';render();const m=document.getElementById('paste-msg');if(m)m.textContent=`Se agregaron ${ok} filas${bad?`; ${bad} no tenían el formato fecha, lote, valor`:''}.`;return;
+  }
+  render();if(['next','prev','finish','start-empty'].includes(act))window.scrollTo(0,0);
+});
+function bindValue(el){const[o,k]=getRef(el.dataset.bind);
+  if(el.type==='checkbox')o[k]=el.checked;else if(el.type==='number')o[k]=el.value===''?0:Number(el.value);else o[k]=el.value;}
+document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.bind)bindValue(e.target);});
+document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.bind)return;bindValue(el);
+  if(el.tagName==='SELECT'||el.type==='checkbox'||'rerender' in el.dataset){if(el.dataset.bind!=='draftEsp.atrae'&&el.dataset.bind!=='draftEsp.riesgo')render();}});
+render();
