@@ -6,6 +6,14 @@ Nació del caso *Spathodea campanulata* y las abejas nativas sin aguijón. De ah
 
 > **Estado:** prototipo. Las fórmulas y los pesos son ilustrativos y están **por calibrar**. Los datos de la finca demostrativa son ficticios.
 
+## La idea central: cada finca es un caso
+
+Cada finca evaluada y exportada queda como un **caso**: su situación, su riesgo y lo que se hizo para corregirlo. Mientras más casos reales se acumulan, más útil se vuelve la app:
+
+> *"Tu finca se parece a estas 3. Esto es lo que les funcionó."*
+
+Eso es la **memoria de casos**, y es el valor que crece con el uso. Un competidor puede copiar las fórmulas, pero no los casos acumulados. Por eso el formato de exportación (`.json`) está pensado desde ya como la unidad de datos de ese aprendizaje.
+
 ## Qué hace
 
 1. **Cuestionario** de la finca en seis pasos: finca, cultivos, especies, prácticas, calendarios y certificación.
