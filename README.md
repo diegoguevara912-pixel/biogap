@@ -22,6 +22,7 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Un competido
 4. **Panel GLOBALG.A.P.** con el margen de Minor Musts y las no conformidades abiertas.
 5. **Ajustes** para activar o desactivar módulos y mover los umbrales de riesgo.
 6. **Guardar y cargar**: autoguardado en el navegador y exportar o importar la finca como archivo `.json`.
+7. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
 
 Los datos de la finca se guardan solo en el navegador del usuario. No se envían a ningún servidor.
 
@@ -50,8 +51,16 @@ src/
 ├─ modules/             un archivo por módulo de riesgo
 │  ├─ polinizadores.js  fertilizacion.js  agua.js  suelo.js  troficas.js
 │  └─ index.js          registro de módulos
-└─ ui/                  vistas: dashboard, cuestionario, plantillas, ajustes y gráficos
+├─ riego/              módulo de riego por goteo
+│  ├─ referencias.js    valores con fuente (FAO-56, CIMMYT)
+│  ├─ calculo.js        fórmulas del diseño agronómico
+│  ├─ reglas.js         validación: cada alerta con su porqué y su fuente
+│  ├─ xlsx.js, csv.js   lectura de archivos sin dependencias externas
+│  └─ extraer.js        de las celdas a los datos, por etiquetas
+└─ ui/                  vistas: dashboard, cuestionario, plantillas, riego, ajustes y gráficos
 docs/formulas.md        fórmula, supuestos y estado de calibración de cada módulo
+docs/catalogo-riego.md  fórmulas, rangos y reglas del módulo de riego
+docs/adr/               decisiones de diseño
 tests/                  pruebas del motor
 ```
 
@@ -66,6 +75,10 @@ tests/                  pruebas del motor
 
 - [x] v0.2: código dividido en módulos, configuración central y pruebas de regresión
 - [x] v0.3: guardar y cargar fincas (JSON) y ajustes por finca (módulos activos y umbrales)
+- [x] v0.4: módulo de riego (calculadora, validador e importador de Excel/CSV), validado con el diseño agronómico del Lab de Riego
+- [ ] Guardar los datos de riego con la finca (hoy se pierden al recargar la página)
+- [ ] Diseño hidráulico y cubicación de reservorio
+- [ ] Más cultivos en `src/riego/referencias.js` (hoy solo maíz)
 - [ ] Perfiles de configuración por cultivo o exportador
 - [ ] Calibrar pesos con los datos de las tesis de Zamorano, cuando estén disponibles
 - [ ] **Memoria de casos (razonamiento basado en casos, k-NN):** sugerir acciones a partir de fincas parecidas ya evaluadas

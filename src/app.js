@@ -6,6 +6,11 @@ import { viewDashboard } from './ui/dashboard.js';
 import { viewWizard, STEPS } from './ui/wizard.js';
 import { viewTemplates } from './ui/templates.js';
 import { viewSettings } from './ui/settings.js';
+import { viewRiego } from './ui/riego.js';
+import { casoEjemplo, riegoVacio, declaradosEjemplo } from './riego/calculo.js';
+import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
+import { leerCsv } from './riego/csv.js';
+import { extraerRiego } from './riego/extraer.js';
 
 // Recupera la última finca guardada en este navegador.
 const previo = cargarLocal();
@@ -14,7 +19,7 @@ if (previo) Object.assign(S, previo);
 function getRef(path){const p=path.split('.');let o=S;for(let i=0;i<p.length-1;i++)o=o[p[i]];return[o,p[p.length-1]];}
 function render(){
   const app=document.getElementById('app');
-  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,ajustes:viewSettings};
+  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,ajustes:viewSettings};
   app.innerHTML=(views[S.view]||viewDashboard)();
   S.msg='';
   guardarLocal(S);
@@ -42,6 +47,11 @@ document.addEventListener('click',e=>{
   else if(act==='toggle-mod'){const id=a.dataset.id,on=S.ajustes.modulosActivos;S.ajustes.modulosActivos=on.includes(id)?on.filter(x=>x!==id):[...on,id];}
   else if(act==='reset-ajustes'){S.ajustes=configBase();}
   else if(act==='load-demo'){S.farm=demoFarm();S.demo=true;S.view='dashboard';S.msg='Se cargó la finca de ejemplo.';}
+  else if(act==='riego-import'){importarRiego();return;}
+  else if(act==='riego-ejemplo'){S.riego={datos:casoEjemplo(),fuente:'ejemplo',archivo:'',origen:{},declarados:declaradosEjemplo(),faltan:[],omitidas:[]};}
+  else if(act==='riego-blanco'){S.riego={datos:riegoVacio(),fuente:'manual',archivo:'',origen:{},declarados:{},faltan:[],omitidas:[]};}
+  else if(act==='riego-add-suelo'){S.riego.datos.suelo.push({nombre:`Parte ${S.riego.datos.suelo.length+1}`,area:null,textura:'',da:null,cc:null,pmp:null,pedregosidad:null,infiltracion:null});}
+  else if(act==='riego-rm-suelo'){S.riego.datos.suelo.splice(+a.dataset.i,1);}
   else if(act==='rm-nc'){f.nc.splice(+a.dataset.i,1);}
   else if(act==='rm-row'){S.tpl.rows.splice(+a.dataset.i,1);}
   else if(act==='paste'){
@@ -52,7 +62,7 @@ document.addEventListener('click',e=>{
   render();if(['next','prev','finish','start-empty'].includes(act))window.scrollTo(0,0);
 });
 function bindValue(el){const[o,k]=getRef(el.dataset.bind);
-  if(el.type==='checkbox')o[k]=el.checked;else if(el.type==='number')o[k]=el.value===''?0:Number(el.value);else o[k]=el.value;}
+  if(el.type==='checkbox')o[k]=el.checked;else if(el.type==='number')o[k]=el.value===''?('nullable' in el.dataset?null:0):Number(el.value);else o[k]=el.value;}
 document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.bind)bindValue(e.target);});
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.bind)return;bindValue(el);
   if(el.tagName==='SELECT'||el.type==='checkbox'||'rerender' in el.dataset){if(el.dataset.bind!=='draftEsp.atrae'&&el.dataset.bind!=='draftEsp.riesgo')queueMicrotask(render);}}); // diferido: el cambio puede llegar durante un blur
@@ -77,6 +87,32 @@ function abrirArchivo(){
       S.farm=farm;S.ajustes=ajustes;S.demo=false;S.view='dashboard';
       S.msg=`Se importó la finca "${farm.nombre||'sin nombre'}".`;
     }catch(err){S.msg=`No se pudo importar: ${err.message}`;}
+    render();
+  });
+  input.click();
+}
+
+// Importar datos de riego desde Excel (.xlsx) o CSV. Nada sale del navegador.
+const LIMITE_ARCHIVO=100*1024*1024;
+function importarRiego(){
+  const input=document.createElement('input');input.type='file';input.accept='.xlsx,.csv,.txt';
+  input.addEventListener('change',async()=>{
+    const file=input.files&&input.files[0];if(!file)return;
+    const nombre=file.name.toLowerCase();
+    try{
+      if(file.size>LIMITE_ARCHIVO)throw new ErrorLectura('El archivo pesa más de 100 MB.');
+      let libro;
+      if(nombre.endsWith('.xlsx'))libro=await leerXlsx(await file.arrayBuffer());
+      else if(nombre.endsWith('.csv')||nombre.endsWith('.txt'))libro=leerCsv(await file.text(),file.name);
+      else if(nombre.endsWith('.xls'))throw new ErrorLectura('Es un Excel antiguo (.xls): guárdalo como .xlsx o CSV y vuelve a cargarlo.');
+      else throw new ErrorLectura('Formato no reconocido: usa .xlsx o .csv.');
+      const x=extraerRiego(libro);
+      const encontrados=Object.keys(x.origen).length;
+      if(!encontrados)throw new ErrorLectura('No se reconoció ningún dato de riego. Revisa que las etiquetas estén junto a sus valores, o escríbelos a mano.');
+      S.riego={datos:x.datos,fuente:'archivo',archivo:file.name,origen:x.origen,declarados:x.declarados,faltan:x.faltan,omitidas:libro.omitidas||[]};
+      S.view='riego';
+      S.msg=`Se leyeron ${encontrados} datos de ${file.name}.`;
+    }catch(err){S.msg=`No se pudo leer ${file.name}: ${err instanceof ErrorLectura?err.message:'el archivo está dañado o no es compatible.'}`;}
     render();
   });
   input.click();

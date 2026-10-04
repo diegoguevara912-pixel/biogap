@@ -1,5 +1,6 @@
 // Estado de la app: finca de ejemplo, finca vacía y borradores de formularios.
 import { CONFIG } from './config.js';
+import { casoEjemplo, declaradosEjemplo } from '../riego/calculo.js';
 
 export function demoFarm() {
   return {
@@ -58,6 +59,8 @@ export const S = {
   // Ajustes personalizables (módulos activos y umbrales). Viajan con la finca al exportar.
   ajustes: { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } },
   msg: '',
+  // Módulo de riego: datos de entrada, de dónde salieron y lo que el archivo traía calculado.
+  riego: { datos: casoEjemplo(), fuente: 'ejemplo', archivo: '', origen: {}, declarados: declaradosEjemplo(), faltan: [], omitidas: [] },
   ...blankDrafts(),
   tpl: {
     tipo: 'fert', objetivo: 150, paste: '',
