@@ -16,7 +16,7 @@ export default {
     if (f.labranza === 'convencional') recs.push('Evaluar labranza mínima en lotes con pendiente.');
     return {
       P, E, V, req, recs,
-      driver: ovs ? 'Suelo desnudo en lluvias' : 'Labranza',
+      driver: ovs ? 'Suelo desnudo en lluvias' : f.labranza === 'convencional' ? 'Labranza convencional' : 'Sin causa dominante',
       formula: `P = labranza (convencional 0.9; mínima 0.5; cero 0.2) = ${P.toFixed(2)}\nE = pendiente (plana 0.3; ondulada 0.6; fuerte 1) = ${E.toFixed(2)}\nV = 0.4 + 0.6·meses desnudos con lluvia / meses de lluvia = ${V.toFixed(2)}`,
     };
   },

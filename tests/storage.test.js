@@ -41,3 +41,15 @@ test('ajustes inválidos vuelven a los valores por defecto', () => {
   assert.deepEqual(normalizarAjustes({ niveles: { alto: 30, medio: 50 } }).niveles, configBase().niveles);
   assert.deepEqual(normalizarAjustes({ modulosActivos: ['agua', 'inventado', 'poli'] }).modulosActivos, ['poli', 'agua']);
 });
+
+import { normalizarTpl } from '../src/core/storage.js';
+
+test('las plantillas viajan en el respaldo y se validan', () => {
+  const tpl = { tipo: 'fert', objetivo: 150, rows: [{ fecha: '2026-01-10', lote: 'L1', valor: 40 }], paste: 'x' };
+  const r = importarTexto(exportarTexto(demoFarm(), configBase(), tpl));
+  assert.deepEqual(r.tpl, { ...tpl, paste: '' });
+  const malo = normalizarTpl({ tipo: 'inventado', objetivo: -3, rows: [{ valor: 'x' }, null, { fecha: 1, lote: 2, valor: 5 }] }, { tipo: 'fert', objetivo: 0, rows: [], paste: '' });
+  assert.equal(malo.tipo, 'fert');
+  assert.equal(malo.objetivo, 0);
+  assert.deepEqual(malo.rows, [{ fecha: '', lote: '', valor: 5 }]);
+});

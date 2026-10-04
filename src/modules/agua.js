@@ -15,7 +15,7 @@ export default {
     if (f.distAgua < 30) recs.push('Mantener una franja de amortiguamiento junto al cuerpo de agua.');
     return {
       P, E, V, req, recs,
-      driver: f.riego === 'gravedad' ? 'Riego por gravedad' : '—',
+      driver: f.riego === 'gravedad' ? 'Riego por gravedad' : f.distAgua < 30 ? 'Cercanía al cuerpo de agua' : 'Sin causa dominante',
       formula: `P = sistema de riego (gravedad 0.9; aspersión 0.6; goteo 0.3) = ${P.toFixed(2)}\nE = área productiva / área total = ${E.toFixed(2)}\nV = distancia al agua = ${V.toFixed(2)}`,
     };
   },

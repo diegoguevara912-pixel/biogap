@@ -7,6 +7,10 @@ export const CONFIG = {
   // Módulos activos, en el orden en que aparecen en el dashboard.
   modulosActivos: ['poli', 'fert', 'agua', 'suelo', 'troficas'],
 
+  // Peso de cada módulo en el índice ambiental global (ilustrativos, por calibrar).
+  // Si se desactivan módulos, el índice se recalcula con los pesos de los activos.
+  pesos: { poli: 0.25, fert: 0.2, agua: 0.2, suelo: 0.15, troficas: 0.2 },
+
   // Umbrales del índice 0-100.
   niveles: { alto: 67, medio: 34 },
 

@@ -43,6 +43,7 @@ export const blankDrafts = () => ({
   draftPlaga: { nombre: '', meses: [], severidad: 'media' },
   draftCult: { nombre: '', ha: 0, siembra: [], cosecha: [] },
   draftNC: { criterio: '', dias: 0 },
+  draftRow: { fecha: '', lote: '', valor: '' },
 });
 
 // Tipos de plantilla de registro.
@@ -56,6 +57,10 @@ export const TPL = {
 // Estado global único de la app.
 export const S = {
   farm: demoFarm(), demo: true, view: 'dashboard', step: 0,
+  theme: 'system', // tema visual: system | light | dark
+  done: {}, // recomendaciones del plan de acción marcadas como hechas
+  sim: { n: false, pol: false, riego: false, suelo: false, selec: false }, // cambios activos en el simulador
+  io: '', ioMsg: '', confirmReset: false, // respaldo en texto y confirmación de borrado
   // Ajustes personalizables (módulos activos y umbrales). Viajan con la finca al exportar.
   ajustes: { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } },
   msg: '',

@@ -1,12 +1,12 @@
 // Módulo: Cadenas tróficas (plaguicidas de amplio espectro y enemigos naturales).
-import { clamp, inter } from '../core/utils.js';
+import { M, clamp, inter } from '../core/utils.js';
 
 export default {
   id: 'troficas',
   nombre: 'Cadenas tróficas',
   ifa: '22 Biodiversidad · 31 MIP',
   evaluar(f, ctx) {
-    const { amplio, plagaM } = ctx;
+    const { amplio, plagaM, aplic, cosechaM } = ctx;
     const tot = f.plaguicidas.length;
     const P = tot ? f.plaguicidas.filter((p) => p.clase === 'amplio').length / tot : 0;
     const E = amplio.length ? inter(amplio, plagaM).length / amplio.length : 0;
@@ -16,9 +16,11 @@ export default {
     const recs = [];
     if (P > 0 && E > 0) recs.push('Preferir productos selectivos o biológicos en los meses de plaga para proteger a los enemigos naturales.');
     if (nat < 0.5 && f.especies.length) recs.push('Aumentar la proporción de especies nativas en cercas y bordes.');
+    const pre = inter(aplic, cosechaM);
+    if (pre.length) recs.push(`Hay aplicaciones en meses de cosecha (${pre.map((m) => M[m]).join(', ')}). Verificar el intervalo de seguridad de cada producto.`);
     return {
       P, E, V, req, recs,
-      driver: P > 0 ? 'Plaguicidas de amplio espectro' : '—',
+      driver: P > 0 ? 'Plaguicidas de amplio espectro' : 'Sin causa dominante',
       formula: `P = aplicaciones de amplio espectro / total = ${P.toFixed(2)}\nE = meses de amplio espectro que coinciden con plagas / meses de amplio espectro = ${E.toFixed(2)}\nV = 1 − 0.6·proporción de especies nativas = ${V.toFixed(2)}`,
     };
   },

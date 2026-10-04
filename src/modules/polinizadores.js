@@ -14,9 +14,10 @@ export default {
     const recs = [];
     if (ov1.length) recs.push(`Mover las aplicaciones fuera de ${ov1.map((m) => M[m]).join(', ')}: coinciden con floración visitada por polinizadores.`);
     if (riesgoFlor.length) recs.push('Hay especies de riesgo para polinizadores en floración. Evaluar refugio o radio de exclusión alrededor de los árboles (método ApiRadar).');
+    if (!f.especies.some((e) => e.tipo === 'Fauna')) recs.push('Registrar las abejas nativas que observas en la finca para afinar el cálculo.');
     return {
       P, E, V, req, recs,
-      driver: ov1.length ? 'Coincidencia floración–aplicación' : riesgoFlor.length ? 'Especies de riesgo en floración' : '—',
+      driver: ov1.length ? 'Coincidencia floración y aplicación' : riesgoFlor.length ? 'Especies de riesgo en floración' : 'Sin causa dominante',
       formula: `P = 0.5·[especie de riesgo] + 0.5·[aplicaciones no biológicas] = ${P.toFixed(2)}\nE = (meses de coincidencia + 0.5·meses de floración de riesgo) / 6 = ${E.toFixed(2)}\nV = 1 si hay abejas nativas registradas, 0.7 si no = ${V.toFixed(2)}`,
     };
   },

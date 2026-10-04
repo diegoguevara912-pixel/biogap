@@ -18,8 +18,10 @@ export function contexto(f) {
   const amplio = uniq(f.plaguicidas.filter((p) => p.clase === 'amplio').flatMap((p) => p.meses));
   const plagaM = uniq(f.plagas.flatMap((p) => p.meses));
   const nativasFauna = f.especies.some((e) => e.tipo === 'Fauna' && e.origen === 'nativa');
+  const cosechaM = uniq(f.cultivos.flatMap((c) => c.cosecha));
+  const siembraM = uniq(f.cultivos.flatMap((c) => c.siembra));
   const ov1 = inter(atraeFlor, aplic);
-  return { atraeFlor, riesgoFlor, aplic, amplio, plagaM, nativasFauna, ov1 };
+  return { atraeFlor, riesgoFlor, aplic, amplio, plagaM, cosechaM, siembraM, nativasFauna, ov1 };
 }
 
 export function evaluar(f, cfg = CONFIG) {
@@ -36,5 +38,30 @@ export function evaluar(f, cfg = CONFIG) {
         score, level: nivel(score, cfg), conf: r.req.filter(Boolean).length / r.req.length,
       };
     });
-  return { mods, ...ctx };
+  // Índice global: promedio ponderado de los módulos activos (pesos renormalizados).
+  const pesoTotal = mods.reduce((s, m) => s + (cfg.pesos?.[m.id] ?? 0), 0);
+  const overall = pesoTotal ? Math.round(mods.reduce((s, m) => s + m.score * (cfg.pesos[m.id] ?? 0), 0) / pesoTotal) : 0;
+  const conf = mods.length ? mods.reduce((s, m) => s + m.conf, 0) / mods.length : 0;
+
+  // Coincidencias de riesgo por mes (para el gráfico de presión).
+  const mh = Array.from({ length: 12 }, () => []);
+  inter(ctx.atraeFlor, ctx.aplic).forEach((m) => mh[m].push('Aplicación durante floración visitada'));
+  inter(f.fertMeses, f.lluviaMeses).forEach((m) => mh[m].push('Fertilización con lluvia fuerte'));
+  inter(f.sueloDesnudoMeses, f.lluviaMeses).forEach((m) => mh[m].push('Suelo desnudo con lluvia'));
+  inter(ctx.amplio, ctx.plagaM).forEach((m) => mh[m].push('Amplio espectro con plaga presente'));
+  inter(ctx.aplic, ctx.cosechaM).forEach((m) => mh[m].push('Aplicación en mes de cosecha'));
+
+  return { mods, overall, conf, mh, ...ctx };
+}
+
+// Simulador: aplica cambios hipotéticos a una copia de la finca y recalcula. No toca los datos reales.
+export function simular(f, sim, cfg = CONFIG) {
+  const g = structuredClone(f);
+  const base = contexto(f);
+  if (sim.n && g.nObjetivo > 0) g.nAplicado = Math.min(g.nAplicado, g.nObjetivo);
+  if (sim.pol) g.plaguicidas.forEach((p) => { if (p.clase !== 'biologico') p.meses = p.meses.filter((m) => !base.atraeFlor.includes(m)); });
+  if (sim.riego && (g.riego === 'gravedad' || g.riego === 'aspersion')) g.riego = 'goteo';
+  if (sim.suelo) { g.sueloDesnudoMeses = []; if (g.labranza === 'convencional') g.labranza = 'minima'; }
+  if (sim.selec) g.plaguicidas.forEach((p) => { if (p.clase === 'amplio') p.clase = 'selectivo'; });
+  return evaluar(g, cfg);
 }

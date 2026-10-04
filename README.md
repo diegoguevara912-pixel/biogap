@@ -17,10 +17,10 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Un competido
 ## Qué hace
 
 1. **Cuestionario** de la finca en seis pasos: finca, cultivos, especies, prácticas, calendarios y certificación.
-2. **Dashboard** con el índice de riesgo (0-100) por módulo, el cruce de calendarios y las recomendaciones.
+2. **Dashboard** con el índice ambiental global, el riesgo (0-100) por módulo, la presión por mes, el cruce de calendarios, un **simulador** ("¿qué pasa si cambio esta práctica?") y un **plan de acción** con casillas.
 3. **Plantillas** de registro (fertilización, riego, mecanización y personalizada) comparadas con el objetivo de la finca.
 4. **Panel GLOBALG.A.P.** con el margen de Minor Musts y las no conformidades abiertas.
-5. **Ajustes** para activar o desactivar módulos y mover los umbrales de riesgo.
+5. **Ajustes** para activar o desactivar módulos y mover los umbrales de riesgo. Tema claro, oscuro o del sistema.
 6. **Guardar y cargar**: autoguardado en el navegador y exportar o importar la finca como archivo `.json`.
 7. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
 
@@ -64,6 +64,14 @@ docs/adr/               decisiones de diseño
 tests/                  pruebas del motor
 ```
 
+## Cómo trabajar con varios asistentes
+
+Este repositorio es la **única versión oficial**. Cualquier asistente (Claude en el chat o Claude Code) trabaja sobre el repo, no sobre copias sueltas:
+
+1. Pídele que clone `diegoguevara912-pixel/biogap` y trabaje en una rama nueva (por ejemplo, `mejoras-diseno`).
+2. Que suba esa rama y deje las pruebas pasando (`npm test`).
+3. Luego se revisa y se une a `main`. GitHub Pages publica `main` sola.
+
 ## Cómo agregar un módulo
 
 1. Crea `src/modules/<nombre>.js` con `{ id, nombre, ifa, evaluar(f, ctx, helpers) }`. La función devuelve `{ P, E, V, req, recs, driver, formula }`, con P, E y V entre 0 y 1.
@@ -76,6 +84,7 @@ tests/                  pruebas del motor
 - [x] v0.2: código dividido en módulos, configuración central y pruebas de regresión
 - [x] v0.3: guardar y cargar fincas (JSON) y ajustes por finca (módulos activos y umbrales)
 - [x] v0.4: módulo de riego (calculadora, validador e importador de Excel/CSV), validado con el diseño agronómico del Lab de Riego
+- [x] v0.5: diseño mejorado (índice global, simulador, plan de acción, presión por mes, tema oscuro, edición en el cuestionario, respaldo en texto)
 - [ ] Guardar los datos de riego con la finca (hoy se pierden al recargar la página)
 - [ ] Diseño hidráulico y cubicación de reservorio
 - [ ] Más cultivos en `src/riego/referencias.js` (hoy solo maíz)

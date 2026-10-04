@@ -11,16 +11,19 @@
 </head>
 <body>
   <header class="top"><div class="wrap bar">
-    <div class="brand">BioG.A.P.<small>Prototipo · riesgo ambiental de la finca</small></div>
-    <nav class="tabs" aria-label="Vistas">
-      <button data-view="dashboard" id="tab-dashboard">Dashboard</button>
-      <button data-view="wizard" id="tab-wizard">Cuestionario</button>
-      <button data-view="plantillas" id="tab-plantillas">Plantillas</button>
-      <button data-view="riego" id="tab-riego">Riego</button>
-      <button data-view="ajustes" id="tab-ajustes">Ajustes</button>
-    </nav>
+    <div class="brand">BioG.A.P.<small>Riesgo ambiental de la finca</small></div>
+    <div class="hright">
+      <nav class="tabs" aria-label="Vistas">
+        <button data-view="dashboard" id="tab-dashboard">Dashboard</button>
+        <button data-view="wizard" id="tab-wizard">Cuestionario</button>
+        <button data-view="plantillas" id="tab-plantillas">Plantillas</button>
+        <button data-view="riego" id="tab-riego">Riego</button>
+        <button data-view="ajustes" id="tab-ajustes">Ajustes</button>
+      </nav>
+      <button class="btn sm" id="theme-btn" data-act="theme" aria-label="Cambiar tema">Tema: sistema</button>
+    </div>
   </div></header>
-  <main class="wrap" id="app"></main>
+  <main class="wrap" id="app" aria-live="polite"></main>
   <script type="module" src="src/app.js"></script>
 </body>
 </html>

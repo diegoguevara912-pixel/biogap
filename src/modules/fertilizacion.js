@@ -15,9 +15,10 @@ export default {
     const recs = [];
     if (ratio > 1) recs.push(`La dosis supera el objetivo de la finca en ${Math.round((ratio - 1) * 100)} %. Ajustar hacia ${f.nObjetivo} kg N/ha.`);
     if (ovr) recs.push('Evitar fertilizar en meses de lluvia fuerte para reducir la escorrentía.');
+    if (f.nAplicado > 0 && !f.nObjetivo) recs.push('Definir un objetivo de nitrógeno con tu agrónomo para poder comparar la dosis.');
     return {
       P, E, V, req, recs,
-      driver: ratio > 1 ? 'Dosis sobre el objetivo' : ovr ? 'Fertilización en lluvias' : '—',
+      driver: ratio > 1 ? 'Dosis sobre el objetivo' : ovr ? 'Fertilización en lluvias' : 'Sin causa dominante',
       formula: `P = (N aplicado / N objetivo) − 0.5 = ${P.toFixed(2)}\nE = pendiente × (0.5 + 0.5·meses con lluvia / meses de fertilización) = ${E.toFixed(2)}\nV = distancia al agua (<30 m: 1; <100 m: 0.7; resto 0.4) = ${V.toFixed(2)}`,
     };
   },
