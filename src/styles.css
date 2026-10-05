@@ -161,3 +161,22 @@ table.rubrica td{padding:6px 4px}
 .estado.verificado{color:var(--good)}
 .estado.criterio-propio{color:var(--pollen)}
 .estado.no-verificado{color:var(--crit)}
+
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.legend .lg{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{display:inline-block;width:16px;height:16px;border-radius:4px;background:var(--chip)}
+.legend .sw.on-flor{background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.legend .sw.on-riesgo{background:var(--pollen-soft);box-shadow:inset 0 0 0 1px var(--pollen)}
+.legend .sw.on-apl{background:color-mix(in srgb,var(--crit) 22%,var(--surface))}
+.legend .sw.on-gen{background:color-mix(in srgb,var(--muted) 28%,var(--surface))}
+.legend .sw.on-cult{background:color-mix(in srgb,var(--good) 26%,var(--surface))}
+.legend .sw.hit{background:var(--crit)}
+table.inten{border-collapse:separate;border-spacing:3px;font-size:12px;min-width:640px;width:100%}
+table.inten caption{text-align:left;padding-bottom:4px}
+table.inten th{font-weight:600;color:var(--muted);text-align:center}
+table.inten td{vertical-align:top;text-align:center;border-radius:5px;padding:4px 2px;background:var(--chip)}
+table.inten td b{display:block;font-size:14px}
+table.inten td span{display:block;font-size:11px;color:var(--muted)}
+table.inten td.i1{background:color-mix(in srgb,var(--warn) 30%,var(--surface))}
+table.inten td.i2{background:color-mix(in srgb,var(--crit) 28%,var(--surface))}
+table.inten td.i3{background:color-mix(in srgb,var(--crit) 50%,var(--surface))}
