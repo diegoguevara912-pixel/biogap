@@ -61,13 +61,17 @@ export const blankDrafts = () => ({
   draftFert: { mes: 0, producto: 'urea', n: 46, p: 0, k: 0, dosis: '', metodo: 'incorporado' },
 });
 
-// Tipos de plantilla de registro.
+// Tipos de plantilla de registro. `pestana` indica que el tipo ya tiene pestaña propia:
+// no se ofrece en Plantillas, solo se redirige a esa pestaña.
 export const TPL = {
-  fert: { nombre: 'Fertilización', unidad: 'kg N/ha', acum: true, obj: 'Dosis máxima anual' },
-  riego: { nombre: 'Riego', unidad: 'm³/semana', acum: false, obj: 'Volumen máximo por registro' },
+  fert: { nombre: 'Fertilización', unidad: 'kg N/ha', acum: true, obj: 'Dosis máxima anual', pestana: 'fertilizacion' },
+  riego: { nombre: 'Riego', unidad: 'm³/semana', acum: false, obj: 'Volumen máximo por registro', pestana: 'riego' },
   mec: { nombre: 'Mecanización', unidad: 'horas de tractor', acum: true, obj: 'Horas máximas anuales' },
   custom: { nombre: 'Personalizada', unidad: 'unidades', acum: false, obj: 'Valor objetivo' },
 };
+
+// Tipos que se registran en la pestaña Plantillas (los que no tienen pestaña propia).
+export const tiposPlantilla = () => Object.keys(TPL).filter((k) => !TPL[k].pestana);
 
 // Estado global único de la app.
 export const S = {
@@ -86,12 +90,7 @@ export const S = {
   riego: { datos: casoEjemplo(), fuente: 'ejemplo', archivo: '', origen: {}, declarados: declaradosEjemplo(), faltan: [], omitidas: [] },
   ...blankDrafts(),
   tpl: {
-    tipo: 'fert', objetivo: 150, paste: '',
-    rows: [
-      { fecha: '2026-01-10', lote: 'Lote 1', valor: 40 },
-      { fecha: '2026-02-05', lote: 'Lote 1', valor: 45 },
-      { fecha: '2026-06-02', lote: 'Lote 2', valor: 50 },
-      { fecha: '2026-07-01', lote: 'Lote 2', valor: 45 },
-    ],
+    tipo: 'mec', objetivo: 0, paste: '',
+    rows: [],
   },
 };

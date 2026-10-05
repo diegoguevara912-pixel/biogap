@@ -63,7 +63,6 @@ document.addEventListener('click',e=>{
   else if(act==='rm-nc'){f.nc.splice(+a.dataset.i,1);}
   else if(act==='rm-row'){S.tpl.rows.splice(+a.dataset.i,1);}
   else if(act==='add-row'){const d=S.draftRow;if(!d.fecha||d.valor===''||isNaN(Number(d.valor)))return;S.tpl.rows.push({fecha:d.fecha,lote:d.lote||'Sin lote',valor:Number(d.valor)});S.draftRow={fecha:'',lote:d.lote,valor:''};}
-  else if(act==='tpl-to-farm'){const tot=S.tpl.rows.reduce((s,r)=>s+(Number(r.valor)||0),0);f.nAplicado=tot;if(S.tpl.objetivo>0)f.nObjetivo=S.tpl.objetivo;S.demo=false;S.ioMsg=`Nitrógeno aplicado actualizado a ${tot} kg N/ha.`;}
   else if(act==='sim-reset'){Object.keys(S.sim).forEach(k=>S.sim[k]=false);}
   else if(act==='reset'){S.confirmReset=true;}
   else if(act==='reset-no'){S.confirmReset=false;}
