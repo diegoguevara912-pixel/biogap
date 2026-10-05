@@ -22,10 +22,15 @@ export const CONFIG = {
   // Salvo que diga otra cosa, pesos y cortes son CRITERIO PROPIO, por validar con especialistas.
   rubrica: {
     poli: {
-      coincidencia: { peso: 35, cortes: [0, 1] }, // meses con aplicación no biológica en floración visitada
-      claseEnFloracion: { peso: 25 }, // producto más agresivo aplicado en floración
-      especiesRiesgo: { peso: 25, cortes: [0, 2] }, // meses de floración de especies de riesgo
-      abejasNativas: { peso: 15 }, // receptor: abejas nativas registradas
+      coincidencia: { peso: 25, cortes: [0, 1] }, // meses con aplicación no biológica en floración visitada
+      claseEnFloracion: { peso: 15 }, // producto más agresivo aplicado en floración
+      especiesRiesgo: { peso: 10, cortes: [0, 2] }, // meses de floración de especies de riesgo
+      abundanciaRiesgo: { peso: 15, cortes: [0, 1000] }, // m³ de copa de especies de riesgo (Osorio 2025: la mayoría ≤ 1 000 m³)
+      abundanciaConteo: { cortes: [0, 1] }, // sin medidas de copa: n.º de árboles de riesgo
+      alternativas: { peso: 15, cortes: [0, 0.5] }, // fracción de meses de floración de riesgo sin otra floración segura
+      aguaSeca: { peso: 10, cortes: [0, 0.5] }, // fracción de meses de floración de riesgo sin lluvia
+      foliarEnFloracion: { peso: 5 }, // aplicaciones foliares (fertilizantes) en floración visitada
+      abejasNativas: { peso: 5 }, // receptor: abejas nativas registradas
     },
     fert: {
       dosis: { peso: 30, cortes: [1, 1.2] }, // N aplicado / N objetivo

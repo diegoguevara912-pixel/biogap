@@ -16,7 +16,7 @@ export function demoFarm() {
       { nombre: 'Maíz', ha: 8, siembra: [4, 5], cosecha: [8, 9] },
     ],
     especies: [
-      { nombre: 'Spathodea campanulata', tipo: 'Árbol', origen: 'exótica', floracion: [0, 1, 2, 3], atrae: true, riesgo: true },
+      { nombre: 'Spathodea campanulata', tipo: 'Árbol', origen: 'exótica', floracion: [0, 1, 2, 3], atrae: true, riesgo: true, cantidad: 3, copaD: 12, copaH: 9 },
       { nombre: 'Gliricidia sepium', tipo: 'Árbol', origen: 'nativa', floracion: [0, 1, 2], atrae: true, riesgo: false },
       { nombre: 'Trigona fulviventris', tipo: 'Fauna', origen: 'nativa', floracion: [], atrae: false, riesgo: false },
       { nombre: 'Plebeia melanica', tipo: 'Fauna', origen: 'nativa', floracion: [], atrae: false, riesgo: false },
@@ -52,7 +52,7 @@ export function emptyFarm() {
 }
 
 export const blankDrafts = () => ({
-  draftEsp: { nombre: '', tipo: 'Árbol', origen: 'nativa', floracion: [], atrae: false, riesgo: false },
+  draftEsp: { nombre: '', tipo: 'Árbol', origen: 'nativa', floracion: [], atrae: false, riesgo: false, cantidad: null, copaD: null, copaH: null },
   draftPlag: { producto: '', clase: 'amplio', meses: [] },
   draftPlaga: { nombre: '', meses: [], severidad: 'media' },
   draftCult: { nombre: '', ha: 0, siembra: [], cosecha: [] },

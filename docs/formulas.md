@@ -14,12 +14,18 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 
 ## Polinizadores
 
-| Variable | Peso | Puntaje |
-|---|---|---|
-| Meses con aplicación no biológica en floración visitada | 35 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 |
-| Producto más agresivo aplicado en floración | 25 | ninguno/biológico 0 · selectivo 50 · amplio 100 |
-| Meses de floración de especies de riesgo | 25 | ≤ 0 → 0 · ≤ 2 → 50 · mayor → 100 |
-| Abejas nativas registradas (receptor) | 15 | nativas 100 · solo no nativas 50 · sin fauna: sin dato |
+Basado en Kuniyoshi (2026) y Osorio (2025), PEG de Zamorano. Kuniyoshi encontró una relación positiva pero débil entre la abundancia floral de *Spathodea campanulata* y las abejas muertas (R² = 0.21, no significativa), y señaló como factores **no medidos** la exposición a agroquímicos, la disponibilidad de otras especies en floración, la disponibilidad de agua, el clima y la condición de las flores. Las variables basadas en esos factores son **hipótesis** y se marcan "No verificado".
+
+| Variable | Peso | Puntaje | Estado |
+|---|---|---|---|
+| Meses con aplicación no biológica en floración visitada | 25 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 | Criterio propio |
+| Producto más agresivo aplicado en floración | 15 | ninguno/biológico 0 · selectivo 50 · amplio 100 | Criterio propio |
+| Meses de floración de especies de riesgo | 10 | ≤ 0 → 0 · ≤ 2 → 50 · mayor → 100 | Criterio propio |
+| Abundancia de la especie de riesgo: volumen de copa V = 4/3·π·(D/2)²·(H/2) (Osorio, Ec. 3); sin medidas, n.º de árboles | 15 | m³: ≤ 0 → 0 · ≤ 1 000 → 50 · mayor → 100 (árboles: 0 / 1 / más) | Verificado (relación débil); corte criterio propio |
+| Meses de floración de riesgo sin otra floración segura (fracción) | 15 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 | No verificado (hipótesis) |
+| Meses de floración de riesgo sin lluvia (fracción) | 10 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 | No verificado (hipótesis) |
+| **Vínculo con Fertilización:** aplicación foliar en floración visitada (solo con plan) | 5 | ninguna 0 · alguna 100 | No verificado (hipótesis) |
+| Abejas nativas registradas (receptor) | 5 | nativas 100 · solo no nativas 50 · sin fauna: sin dato | Criterio propio |
 
 ## Fertilización
 
@@ -67,4 +73,9 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 - Nutriente aplicado (kg/ha) = dosis de producto (kg/ha) × grado (%) ÷ 100. El grado N-P₂O₅-K₂O viene en la etiqueta. Conversión de grado a producto verificada contra UT Extension, Fertilizer Cost Calculator v1.0 (University of Tennessee).
 - Unidades: 1 quintal = 100 lb = 45.359237 kg; 1 manzana = 10 000 varas² = 0.69873 ha; 1 qq/mz ≈ 64.9 kg/ha; 1 lb/acre ≈ 1.121 kg/ha.
 - Los objetivos por nutriente los pone el usuario (análisis de suelo o agrónomo); la app no recomienda dosis.
-- Objetivo de sostenibilidad: el plan alimenta Fertilización y, por sus efectos en el ecosistema, Suelo y Agua. El vínculo con Polinizadores queda pendiente de las variables de Kuniyoshi (2025).
+- Objetivo de sostenibilidad: el plan alimenta Fertilización y, por sus efectos en el ecosistema, Suelo y Agua. Con Polinizadores se vincula por las aplicaciones foliares en floración visitada.
+
+## Fuentes de los vínculos ecológicos
+
+- Kuniyoshi Aguilar, A. S. (2026). *Fenología de Spathodea campanulata en el campus de la Universidad Zamorano y presencia de abejas muertas asociadas a sus flores.* PEG, Zamorano.
+- Osorio Banegas, N. E. (2025). *Evaluación de la distribución de Spathodea campanulata en el campus de la Universidad Zamorano.* PEG, Zamorano.

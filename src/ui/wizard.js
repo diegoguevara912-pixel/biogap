@@ -5,6 +5,8 @@ import { months, field, select } from './components.js';
 import { conPlan } from '../fert/calculo.js';
 
 export const STEPS=['Finca','Cultivos','Especies','Prácticas','Calendarios','Certificación'];
+const numOpc=(id,label,bind,val,hint)=>`<div class="f"><label for="${id}">${label}</label><input id="${id}" type="number" min="0" step="any" data-nullable data-bind="${bind}" value="${val??''}"><span class="hint">${hint}</span></div>`;
+
 export function viewWizard(){
   const f=S.farm,s=S.step;let body='';
   const ed=(l,i)=>`<button class="btn sm" data-act="edit" data-list="${l}" data-i="${i}">Editar</button><button class="btn sm" data-act="rm" data-list="${l}" data-i="${i}">Quitar</button>`;
@@ -26,7 +28,7 @@ export function viewWizard(){
     <div class="f"><span class="label">Meses de cosecha</span>${months('draftCult.cosecha',S.draftCult.cosecha)}</div>
     <div><button class="btn" data-act="add-cult">Agregar cultivo</button></div></div>`:''}`;
   if(s===2)body=`<h2>¿Qué especies hay en tu finca?</h2><p class="muted">Incluye árboles, malezas, especies nativas y fauna que observes, como abejas nativas.</p>
-    <div class="list">${f.especies.map((e,i)=>`<div class="item"><span class="grow"><b><i>${esc(e.nombre)}</i></b> · ${e.tipo} · ${e.origen}${e.floracion.length?` · florece ${mlist(e.floracion)}`:''}</span>${e.atrae?'<span class="chip">Atrae polinizadores</span>':''}${e.riesgo?'<span class="chip r">Riesgo para polinizadores</span>':''}${ed('especies',i)}</div>`).join('')||'<p class="muted">Aún no hay especies.</p>'}</div>
+    <div class="list">${f.especies.map((e,i)=>`<div class="item"><span class="grow"><b><i>${esc(e.nombre)}</i></b> · ${e.tipo} · ${e.origen}${e.floracion.length?` · florece ${mlist(e.floracion)}`:''}${e.cantidad?` · ${e.cantidad} ind.`:''}${e.copaD&&e.copaH?` · copa ${e.copaD}×${e.copaH} m`:''}</span>${e.atrae?'<span class="chip">Atrae polinizadores</span>':''}${e.riesgo?'<span class="chip r">Riesgo para polinizadores</span>':''}${ed('especies',i)}</div>`).join('')||'<p class="muted">Aún no hay especies.</p>'}</div>
     <div class="subform"><h3>Agregar especie</h3><div class="fields">
       ${field('e-nom','Nombre científico o común','draftEsp.nombre',S.draftEsp.nombre)}
       ${select('e-tipo','Tipo','draftEsp.tipo',S.draftEsp.tipo,[['Árbol','Árbol'],['Arbusto','Arbusto'],['Maleza','Maleza'],['Cultivo','Cultivo'],['Fauna','Fauna']])}
@@ -34,7 +36,12 @@ export function viewWizard(){
     </div>
     <div class="f"><span class="label">Calendario de floración</span>${months('draftEsp.floracion',S.draftEsp.floracion)}</div>
     <div class="row"><label class="check"><input id="e-atrae" type="checkbox" data-bind="draftEsp.atrae" ${S.draftEsp.atrae?'checked':''}> Atrae polinizadores</label>
-    <label class="check"><input id="e-riesgo" type="checkbox" data-bind="draftEsp.riesgo" ${S.draftEsp.riesgo?'checked':''}> Es un riesgo para polinizadores</label></div>
+    <label class="check"><input id="e-riesgo" type="checkbox" data-bind="draftEsp.riesgo" data-rerender ${S.draftEsp.riesgo?'checked':''}> Es un riesgo para polinizadores</label></div>
+    ${S.draftEsp.riesgo?`<div class="fields">
+      ${numOpc('e-cant','Número de individuos','draftEsp.cantidad',S.draftEsp.cantidad,'Árboles en la finca o su borde')}
+      ${numOpc('e-cd','Diámetro de copa (m)','draftEsp.copaD',S.draftEsp.copaD,'Opcional: promedio de dos medidas')}
+      ${numOpc('e-ch','Altura de copa (m)','draftEsp.copaH',S.draftEsp.copaH,'Opcional')}
+    </div><p class="muted small">Con estas medidas la app estima el volumen de copa (Osorio 2025, Ec. 3), un indicador de cuántas flores puede ofrecer el árbol.</p>`:''}
     <div><button class="btn" data-act="add-esp">Agregar especie</button></div></div>`;
   const plan=f.fertPlan.length>0;
   if(s===3)body=`<h2>¿Qué prácticas agrícolas usas?</h2><div class="fields">

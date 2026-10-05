@@ -35,6 +35,8 @@ export function normalizarFinca(o) {
       tipo: opcion(e.tipo, ['Árbol', 'Arbusto', 'Maleza', 'Cultivo', 'Fauna'], 'Árbol'),
       origen: opcion(e.origen, ['nativa', 'exótica', 'desconocido'], 'desconocido'),
       floracion: meses(e.floracion), atrae: bool(e.atrae), riesgo: bool(e.riesgo),
+      // Opcionales: número de individuos y medidas de copa en m (para el volumen de copa, Osorio 2025).
+      ...Object.fromEntries([['cantidad', numONulo(e.cantidad, 1e6)], ['copaD', numONulo(e.copaD, 100)], ['copaH', numONulo(e.copaH, 100)]].filter(([, v]) => v != null)),
     }),
     riego: opcion(o.riego, ['gravedad', 'aspersion', 'goteo', 'ninguno'], v.riego),
     nAplicado: num(o.nAplicado), nObjetivo: num(o.nObjetivo), pObjetivo: num(o.pObjetivo), kObjetivo: num(o.kObjetivo),
