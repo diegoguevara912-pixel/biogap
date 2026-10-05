@@ -38,14 +38,16 @@ export const CONFIG = {
     },
     agua: {
       sistema: { peso: 25 }, // sistema de riego según su eficiencia de aplicación (FAO)
-      distancia: { peso: 25, cortes: [100, 30], inverso: true }, // m al cuerpo de agua
+      distancia: { peso: 20, cortes: [100, 30], inverso: true }, // m al cuerpo de agua
       proporcionProductiva: { peso: 15, cortes: [0.5, 0.8] }, // área productiva / área total
-      disenoRiego: { peso: 35 }, // validación del módulo Riego contra FAO-56
+      disenoRiego: { peso: 30 }, // validación del módulo Riego contra FAO-56
+      fertirriegoEscorrentia: { peso: 10 }, // fertirriego con un diseño que escurre (solo si hay fertirriego)
     },
     suelo: {
-      sueloDesnudoLluvia: { peso: 40, cortes: [0, 1] }, // meses de suelo desnudo con lluvia fuerte
-      labranza: { peso: 30 },
-      pendiente: { peso: 30 },
+      sueloDesnudoLluvia: { peso: 35, cortes: [0, 1] }, // meses de suelo desnudo con lluvia fuerte
+      labranza: { peso: 25 },
+      pendiente: { peso: 25 },
+      fertSueloDesnudo: { peso: 15, cortes: [0, 0.25] }, // fracción de N+P2O5 aplicada sobre suelo desnudo en lluvias (plan)
     },
     troficas: {
       amplioEspectro: { peso: 35, cortes: [0, 0.5] }, // fracción de productos de amplio espectro

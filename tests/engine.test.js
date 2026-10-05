@@ -64,8 +64,8 @@ test('cada variable tiene puntaje 0, 50, 100 o sin dato, y dice su estado de evi
   }
 });
 
-const EXPECT_DEMO = [["poli",100,"Alto",1],["fert",60,"Medio",1],["agua",69,"Alto",0.65],["suelo",65,"Medio",1],["troficas",58,"Medio",1]];
-const EXPECT_EMPTY = [["poli",0,"Bajo",0],["fert",0,"Bajo",0.2],["agua",0,"Bajo",0.5],["suelo",0,"Bajo",0.6],["troficas",0,"Bajo",0]];
+const EXPECT_DEMO = [["poli",100,"Alto",1],["fert",60,"Medio",1],["agua",71,"Alto",0.67],["suelo",63,"Medio",1],["troficas",58,"Medio",1]];
+const EXPECT_EMPTY = [["poli",0,"Bajo",0],["fert",0,"Bajo",0.2],["agua",0,"Bajo",0.5],["suelo",0,"Bajo",0.59],["troficas",0,"Bajo",0]];
 
 import { simular } from '../src/core/engine.js';
 

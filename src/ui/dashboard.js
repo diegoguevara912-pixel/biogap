@@ -22,7 +22,7 @@ export function extraRiego(){
 function tablaRubrica(m){
   const pt=v=>v.puntaje==null?'<span class="muted">sin dato</span>':`<span class="pill ${v.puntaje>=67?'Alto':v.puntaje>=34?'Medio':'Bajo'}">${v.puntaje}</span>`;
   return `<div class="scroll"><table class="data rubrica"><thead><tr><th>Variable</th><th>Valor</th><th class="num">Puntaje</th><th class="num">Peso</th></tr></thead><tbody>
-    ${m.variables.map(v=>`<tr><td>${esc(v.nombre)}<div class="estado ${v.estado.replace(' ','-')}" title="${esc(v.fuente)}">${ESTADOS[v.estado]}${v.fuente?' ⓘ':''}</div></td><td>${esc(v.valor)}</td><td class="num">${pt(v)}</td><td class="num">${v.peso}</td></tr>`).join('')}
+    ${m.variables.filter(v=>v.aplica!==false).map(v=>`<tr><td>${esc(v.nombre)}<div class="estado ${v.estado.replace(' ','-')}" title="${esc(v.fuente)}">${ESTADOS[v.estado]}${v.fuente?' ⓘ':''}</div></td><td>${esc(v.valor)}</td><td class="num">${pt(v)}</td><td class="num">${v.peso}</td></tr>`).join('')}
   </tbody></table></div>
   <p class="muted small">Riesgo = Σ peso × puntaje ÷ Σ peso, solo con las variables que tienen dato. Pesos y cortes: criterio propio, por validar.</p>`;
 }
@@ -76,7 +76,7 @@ export function viewDashboard(){
         <div class="bar-track" aria-hidden="true"><span class="fill-${m.level}" style="width:${m.score}%"></span></div>
         <p class="muted small">Causa principal: ${m.driver}</p>
         <div><div class="row between small muted"><span>Confianza de datos</span><span>${Math.round(m.conf*100)} %</span></div><div class="conf"><span style="width:${m.conf*100}%"></span></div></div>
-        <details><summary>Ver rúbrica (${m.variables.length} variables)</summary>${tablaRubrica(m)}</details>
+        <details><summary>Ver rúbrica (${m.variables.filter(v=>v.aplica!==false).length} variables)</summary>${tablaRubrica(m)}</details>
       </article>`).join('')}
     </div></section>
   </div>

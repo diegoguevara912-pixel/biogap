@@ -5,7 +5,7 @@
 
 export const FUENTE_UT = {
   cita: 'UT Extension, Fertilizer Cost Calculator v1.0 (Ferguson y McKinley, University of Tennessee)',
-  regla: 'Costo por unidad de nutriente = precio del producto ÷ cantidad de nutriente que contiene.',
+  regla: 'Cantidad de producto = nutriente requerido ÷ (grado del producto ÷ 100).',
 };
 
 export const PRODUCTOS = [
@@ -35,7 +35,13 @@ export const METODOS = {
 // castellana de 0.8359 m = 6 987.3 m² = 0.69873 ha.
 export const QQ_KG = 45.359237;
 export const MZ_HA = 0.69873;
+// 1 lb/acre = 0.45359237 kg / 0.40468564 ha = 1.12085 kg/ha.
 export const UNIDADES = {
   kgha: { nombre: 'kg/ha', aKgHa: 1 },
   qqmz: { nombre: 'qq/mz', aKgHa: QQ_KG / MZ_HA }, // 1 qq/mz ≈ 64.9 kg/ha
+  qqha: { nombre: 'qq/ha', aKgHa: QQ_KG },
+  kgmz: { nombre: 'kg/mz', aKgHa: 1 / MZ_HA },
+  lbacre: { nombre: 'lb/acre', aKgHa: 0.45359237 / 0.40468564 },
 };
+// Unidades que se ofrecen como botones en la pestaña (las demás se aceptan al importar).
+export const UNIDADES_UI = ['kgha', 'qqmz'];

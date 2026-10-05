@@ -10,6 +10,7 @@ import { viewRiego } from './ui/riego.js';
 import { viewCasos } from './ui/casos.js';
 import { viewFertilizacion } from './ui/fertilizacion.js';
 import { producto, UNIDADES } from './fert/catalogo.js';
+import { extraerFert, PLANTILLA_CSV } from './fert/extraer.js';
 import { nombreCultivoPrincipal } from './casos/perfil.js';
 import { casoEjemplo, riegoVacio, declaradosEjemplo } from './riego/calculo.js';
 import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
@@ -80,15 +81,17 @@ document.addEventListener('click',e=>{
   else if(act==='import'){abrirArchivo();return;}
   else if(act==='toggle-mod'){const id=a.dataset.id,on=S.ajustes.modulosActivos;S.ajustes.modulosActivos=on.includes(id)?on.filter(x=>x!==id):[...on,id];}
   else if(act==='reset-ajustes'){S.ajustes=configBase();}
+  else if(act==='fert-import'){importarFert();return;}
+  else if(act==='fert-plantilla'){bajar(PLANTILLA_CSV,'plantilla-fertilizacion.csv','text/csv;charset=utf-8');return;}
   else if(act==='fert-unidad'){S.fertUnidad=UNIDADES[a.dataset.u]?a.dataset.u:'kgha';}
   else if(act==='add-fert'){const d=S.draftFert,dos=Number(d.dosis);if(!(dos>0)){S.msg='Escribe una dosis mayor que cero.';render();return;}
     const g=producto(d.producto),otro=g.id==='otro',pct=x=>Math.min(100,Math.max(0,Number(x)||0));
     f.fertPlan.push({mes:Number(d.mes)||0,producto:g.id,n:otro?pct(d.n):g.n,p:otro?pct(d.p):g.p,k:otro?pct(d.k):g.k,
-      dosis:dos*UNIDADES[S.fertUnidad].aKgHa,metodo:d.metodo,precioQQ:Number(d.precioQQ)>0?Number(d.precioQQ):null});
-    f.fertPlan.sort((x,y)=>x.mes-y.mes);S.draftFert={...d,dosis:'',precioQQ:d.precioQQ};S.demo=false;}
+      dosis:dos*UNIDADES[S.fertUnidad].aKgHa,metodo:d.metodo});
+    f.fertPlan.sort((x,y)=>x.mes-y.mes);S.draftFert={...d,dosis:''};S.demo=false;}
   else if(act==='rm-fert'){f.fertPlan.splice(+a.dataset.i,1);S.demo=false;}
   else if(act==='edit-fert'){const x=f.fertPlan.splice(+a.dataset.i,1)[0];
-    S.draftFert={mes:x.mes,producto:x.producto,n:x.n,p:x.p,k:x.k,dosis:+(x.dosis/UNIDADES[S.fertUnidad].aKgHa).toFixed(2),metodo:x.metodo,precioQQ:x.precioQQ??''};}
+    S.draftFert={mes:x.mes,producto:x.producto,n:x.n,p:x.p,k:x.k,dosis:+(x.dosis/UNIDADES[S.fertUnidad].aKgHa).toFixed(2),metodo:x.metodo};}
   else if(act==='caso-guardar'){
     const finca=normalizarFinca(structuredClone(f));const cult=nombreCultivoPrincipal(finca);
     S.casos.push({id:'propio-'+Date.now().toString(36),origen:S.demo?'ejemplo':'propio',etiqueta:`${finca.nombre||'Finca sin nombre'}${cult?' · '+cult:''}`,guardado:new Date().toISOString(),finca});
@@ -137,6 +140,32 @@ function abrirArchivo(){
       S.farm=farm;S.ajustes=ajustes;if(tpl)S.tpl=tpl;S.demo=false;S.done={};S.view='dashboard';
       S.msg=`Se importó la finca "${farm.nombre||'sin nombre'}".`;
     }catch(err){S.msg=`No se pudo importar: ${err.message}`;}
+    render();
+  });
+  input.click();
+}
+
+// Descarga un texto como archivo.
+function bajar(texto,nombre,tipo){const url=URL.createObjectURL(new Blob(['\ufeff'+texto],{type:tipo}));const l=document.createElement('a');l.href=url;l.download=nombre;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+
+// Importar el plan de fertilización desde Excel (.xlsx) o CSV. Nada sale del navegador.
+function importarFert(){
+  const input=document.createElement('input');input.type='file';input.accept='.xlsx,.csv,.txt';
+  input.addEventListener('change',async()=>{
+    const file=input.files&&input.files[0];if(!file)return;const nombre=file.name.toLowerCase();
+    try{
+      if(file.size>LIMITE_ARCHIVO)throw new ErrorLectura('El archivo pesa más de 100 MB.');
+      let libro;
+      if(nombre.endsWith('.xlsx'))libro=await leerXlsx(await file.arrayBuffer());
+      else if(nombre.endsWith('.csv')||nombre.endsWith('.txt'))libro=leerCsv(await file.text(),file.name);
+      else if(nombre.endsWith('.xls'))throw new ErrorLectura('Es un Excel antiguo (.xls): guárdalo como .xlsx o CSV y vuelve a cargarlo.');
+      else throw new ErrorLectura('Formato no reconocido: usa .xlsx o .csv.');
+      const x=extraerFert(libro);
+      if(!x.hoja)throw new ErrorLectura('No encontré una fila de encabezados con "Producto" y "Dosis". Usa la plantilla como guía.');
+      if(!x.plan.length)throw new ErrorLectura(`Encontré los encabezados en "${x.hoja}", pero ninguna fila se pudo leer.${x.omitidas[0]?' Fila '+x.omitidas[0].fila+': '+x.omitidas[0].motivo:''}`);
+      S.farm.fertPlan=x.plan;S.demo=false;S.fertImport={archivo:file.name,hoja:x.hoja,omitidas:x.omitidas,avisos:x.avisos};S.view='fertilizacion';
+      S.msg=`Se leyeron ${x.plan.length} aplicaciones de ${file.name}${x.omitidas.length?`; ${x.omitidas.length} fila(s) no se pudieron leer`:''}.`;
+    }catch(err){S.msg=`No se pudo leer ${file.name}: ${err instanceof ErrorLectura?err.message:'el archivo está dañado o no es compatible.'}`;}
     render();
   });
   input.click();

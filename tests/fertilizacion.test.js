@@ -1,40 +1,37 @@
 // Plan de fertilización: nutrientes, costos, unidades, hallazgos y conexión con el motor.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nutrientes, costoHa, conPlan, resumen } from '../src/fert/calculo.js';
+import { nutrientes, conPlan, resumen } from '../src/fert/calculo.js';
+import { extraerFert, mesDe, productoDe, unidadDe, metodoDe, PLANTILLA_CSV } from '../src/fert/extraer.js';
+import { leerCsv } from '../src/riego/csv.js';
+import { CONFIG } from '../src/core/config.js';
 import { PRODUCTOS, QQ_KG, MZ_HA, UNIDADES } from '../src/fert/catalogo.js';
 import { evaluar, simular } from '../src/core/engine.js';
 import { demoFarm, emptyFarm } from '../src/core/state.js';
 import { normalizarFinca, importarTexto, exportarTexto, configBase } from '../src/core/storage.js';
 
 const cerca = (a, b, tol = 1e-3) => assert.ok(Math.abs(a - b) <= tol, `${a} ≠ ${b}`);
-const ap = (o) => ({ mes: 0, producto: 'otro', n: 0, p: 0, k: 0, dosis: 100, metodo: 'incorporado', precioQQ: null, ...o });
+const ap = (o) => ({ mes: 0, producto: 'otro', n: 0, p: 0, k: 0, dosis: 100, metodo: 'incorporado', ...o });
 
-test('reproduce la calculadora de UT Extension (63.152 $/acre)', () => {
-  // UT: urea 440 $/ton, DAP 535 $/ton, KCl 705 $/ton; 60 lb N, 30 lb P2O5, 30 lb K2O por acre; aplicación 5 $/acre.
-  // El N del DAP se acredita y el resto lo pone la urea; todo el costo del DAP va al P2O5.
-  const precioLb = { urea: 440 / 920, dap: 535 / 920, kcl: 705 / 1200 };
-  const nDap = (30 * 18) / 46;
-  const total = 5 + (60 - nDap) * precioLb.urea + 30 * precioLb.dap + 30 * precioLb.kcl;
-  cerca(total, 63.152);
-  // Libras de producto con el mismo grado que usa el catálogo.
+test('reproduce las cantidades de producto de la calculadora de UT Extension', () => {
+  // UT: 60 lb N, 30 lb P2O5, 30 lb K2O por acre; el N del DAP se acredita y el resto lo pone la urea.
   const g = (id) => PRODUCTOS.find((p) => p.id === id);
-  cerca((60 - nDap) / (g('urea').n / 100), 104.915);
-  cerca(30 / (g('dap').p / 100), 65.217);
-  cerca(30 / (g('kcl').k / 100), 50);
+  const nDap = (30 * g('dap').n) / g('dap').p;
+  cerca(nDap, 11.739);
+  cerca((60 - nDap) / (g('urea').n / 100), 104.915); // lb de urea
+  cerca(30 / (g('dap').p / 100), 65.217); // lb de DAP
+  cerca(30 / (g('kcl').k / 100), 50); // lb de KCl
 });
 
-test('nutrientes y costo de una aplicación', () => {
-  const a = ap({ producto: '15-15-15', n: 15, p: 15, k: 15, dosis: 300, precioQQ: 1000 });
-  assert.deepEqual(nutrientes(a), { n: 45, p: 45, k: 45 });
-  cerca(costoHa(a), (300 / QQ_KG) * 1000);
-  assert.equal(costoHa(ap({})), null);
+test('nutrientes de una aplicación', () => {
+  assert.deepEqual(nutrientes(ap({ n: 15, p: 15, k: 15, dosis: 300 })), { n: 45, p: 45, k: 45 });
 });
 
 test('unidades: quintal exacto y manzana de 10 000 varas²', () => {
   assert.equal(QQ_KG, 45.359237);
   cerca(MZ_HA, 0.8359 ** 2, 1e-4);
   cerca(UNIDADES.qqmz.aKgHa, 64.917, 0.01);
+  cerca(UNIDADES.lbacre.aKgHa, 1.12085, 1e-4);
 });
 
 test('con plan, el N total y los meses salen del plan', () => {
@@ -55,15 +52,6 @@ test('hallazgos de la finca demo: exceso de N, urea al voleo y lluvia', () => {
   assert.ok(r.fracMaxN < 0.5); // repartido en 4 meses
 });
 
-test('compara fuentes de N por costo por kg de N', () => {
-  const f = { ...emptyFarm(), fertPlan: [ap({ producto: 'urea', n: 46, precioQQ: 900 }), ap({ producto: 'nitrato-amonio', n: 34, precioQQ: 800 })] };
-  const r = resumen(f);
-  cerca(r.nMasBarato.costoKgN, 900 / (QQ_KG * 0.46));
-  assert.equal(r.nMasBarato.producto, 'urea'); // más caro por quintal, más barato por kg de N
-  assert.equal(r.filas[0].n, 46); // el grado (%) no se pisa con los kg
-  assert.equal(r.filas[0].kgN, 46);
-});
-
 test('el simulador reduce el plan al objetivo de N sin tocar la finca', () => {
   const f = demoFarm();
   const antes = JSON.stringify(f);
@@ -73,10 +61,56 @@ test('el simulador reduce el plan al objetivo de N sin tocar la finca', () => {
 });
 
 test('el plan viaja en el .json y se valida', () => {
-  const f = { ...demoFarm(), fertPlan: [...demoFarm().fertPlan, { mes: 14, dosis: 10 }, { mes: 3, dosis: -5 }, { mes: 3, dosis: 50, n: 250, metodo: 'x' }] };
+  const f = { ...demoFarm(), fertPlan: [...demoFarm().fertPlan, { mes: 14, dosis: 10 }, { mes: 3, dosis: -5 }, { mes: 3, dosis: 50, n: 250, metodo: 'x', precioQQ: 900 }] };
   const r = importarTexto(exportarTexto(f, configBase(), null)).farm;
   assert.equal(r.fertPlan.length, 5); // descarta mes 14 y dosis negativa
   assert.equal(r.fertPlan[4].n, 100); // grado limitado a 100 %
   assert.equal(r.fertPlan[4].metodo, 'voleo');
+  assert.equal('precioQQ' in r.fertPlan[4], false); // los costos ya no se guardan
   assert.deepEqual(normalizarFinca({}).fertPlan, []);
+});
+
+test('lee la plantilla de fertilización (CSV) y convierte unidades', () => {
+  const x = extraerFert(leerCsv(PLANTILLA_CSV, 'plantilla.csv'));
+  assert.equal(x.plan.length, 3);
+  assert.deepEqual(x.plan.map((a) => [a.mes, a.producto, a.metodo]), [[0, '15-15-15', 'incorporado'], [1, 'urea', 'voleo'], [5, 'sulfato-amonio', 'incorporado']]);
+  cerca(x.plan[0].dosis, 4.5 * 64.917, 0.05); // 4.5 qq/mz en kg/ha
+  assert.deepEqual(x.omitidas, []);
+});
+
+test('lector tolerante: encabezados distintos, fechas, fórmulas propias y filas malas', () => {
+  const csv = ['Finca El Ejemplo', '', 'Fecha;Fertilizante;Cantidad (kg/ha);Forma', '2026-03-10;18-5-15;200;banda', '15/07/2026;UREA;100;', 'Agosto;Abono raro;50;voleo', 'Sep;KCl;;voleo'].join('\n');
+  const x = extraerFert(leerCsv(csv));
+  assert.deepEqual(x.plan.map((a) => [a.mes, a.producto, a.n, a.p, a.k, a.dosis, a.metodo]),
+    [[2, 'otro', 18, 5, 15, 200, 'incorporado'], [6, 'urea', 46, 0, 0, 100, 'voleo']]);
+  assert.equal(x.omitidas.length, 2); // producto no reconocido y dosis vacía
+  assert.ok(x.avisos.some((a) => a.includes('al voleo'))); // método faltante: se avisa
+});
+
+test('reconoce meses, productos, unidades y métodos', () => {
+  assert.deepEqual(['enero', 'Dic', 3, 45000, '2026-11-02', 'x'].map(mesDe), [0, 11, 2, 2, 10, null]);
+  assert.equal(productoDe('Fórmula 12-24-12').id, '12-24-12');
+  assert.equal(productoDe('Muriato de potasio').id, 'kcl');
+  assert.equal(productoDe('algo'), null);
+  assert.deepEqual(['kg/ha', 'QQ/MZ', 'lb/acre', 'litros'].map(unidadDe), ['kgha', 'qqmz', 'lbacre', null]);
+  assert.deepEqual(['Fertirriego', 'Foliar', 'enterrado', '?'].map(metodoDe), ['fertirriego', 'foliar', 'incorporado', null]);
+});
+
+test('vínculo Fertilización → Suelo: fertilizar sobre suelo desnudo en lluvias', () => {
+  const suelo = (f) => evaluar(f).mods.find((m) => m.id === 'suelo');
+  const base = { ...demoFarm(), sueloDesnudoMeses: [5], lluviaMeses: [5] };
+  const fuera = suelo({ ...base, fertPlan: [ap({ mes: 0, n: 46 })] });
+  const dentro = suelo({ ...base, fertPlan: [ap({ mes: 5, n: 46 })] });
+  assert.ok(dentro.score > fuera.score);
+  assert.equal(suelo({ ...base, fertPlan: [] }).variables.find((v) => v.id === 'fertSueloDesnudo').aplica, false); // sin plan, no aplica
+});
+
+test('vínculo Fertilización → Agua: fertirriego con un diseño que escurre', () => {
+  const agua = (f, x) => evaluar(f, CONFIG, x).mods.find((m) => m.id === 'agua');
+  const f = { ...demoFarm(), fertPlan: [ap({ n: 46, metodo: 'fertirriego' })] };
+  const escurre = { riego: [{ id: 'escorrentia', nivel: 'error' }] };
+  assert.ok(agua(f, escurre).score > agua({ ...f, fertPlan: [ap({ n: 46 })] }, escurre).score);
+  // Sin fertirriego, la variable no aplica: no cambia ni el riesgo ni la confianza.
+  const sinFR = agua({ ...f, fertPlan: [ap({ n: 46 })] });
+  assert.equal(sinFR.variables.find((v) => v.id === 'fertirriegoEscorrentia').aplica, false);
 });

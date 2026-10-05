@@ -21,7 +21,10 @@ export function porCortes(x, { cortes, inverso = false }) {
 export const variable = (id, nombre, peso, puntaje, valor, estado = 'criterio propio', fuente = '') =>
   ({ id, nombre, peso, puntaje, valor, estado, fuente });
 
-export function puntuar(vars) {
+// Una variable con aplica: false (p. ej. fertirriego en una finca que no lo usa) no cuenta
+// ni para el riesgo ni para la confianza.
+export function puntuar(todas) {
+  const vars = todas.filter((v) => v.aplica !== false);
   const total = vars.reduce((s, v) => s + v.peso, 0);
   const con = vars.filter((v) => v.puntaje != null);
   const peso = con.reduce((s, v) => s + v.peso, 0);

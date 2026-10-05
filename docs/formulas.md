@@ -4,7 +4,7 @@
 
 **Riesgo del módulo = Σ peso × puntaje ÷ Σ peso**, solo con las variables que tienen dato.
 
-**Confianza de datos = peso con dato ÷ peso total.** Un dato faltante baja la confianza; no cuenta como riesgo cero.
+**Confianza de datos = peso con dato ÷ peso total.** Un dato faltante baja la confianza; no cuenta como riesgo cero. Una variable que **no aplica** a la finca (p. ej. fertirriego si no se usa) no cuenta para nada.
 
 Niveles: **Alto** ≥ 67 · **Medio** ≥ 34 · **Bajo** < 34. Pesos, cortes y niveles se ajustan en `src/core/config.js`.
 
@@ -38,17 +38,19 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 | Variable | Peso | Puntaje |
 |---|---|---|
 | Sistema de riego (eficiencia FAO 90/75/60 %) | 25 | goteo 0 · aspersión 50 · gravedad 100 · sin riego 0 |
-| Distancia al cuerpo de agua (m) | 25 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
+| Distancia al cuerpo de agua (m) | 20 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
 | Área productiva / área total | 15 | ≤ 0.5 → 0 · ≤ 0.8 → 50 · mayor → 100 |
-| Hallazgos del módulo Riego (FAO-56) | 35 | sin hallazgos 0 · advertencias 50 · error 100 · sin cargar: sin dato |
+| Hallazgos del módulo Riego (FAO-56) | 30 | sin hallazgos 0 · advertencias 50 · error 100 · sin cargar: sin dato |
+| **Vínculo con Fertilización:** fertirriego con un diseño de riego que escurre (solo si hay fertirriego) | 10 | no escurre 0 · escurre 100 |
 
 ## Suelo
 
 | Variable | Peso | Puntaje |
 |---|---|---|
-| Meses de suelo desnudo con lluvia | 40 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 |
-| Labranza | 30 | cero 0 · mínima 50 · convencional 100 |
-| Pendiente | 30 | plana 0 · ondulada 50 · fuerte 100 |
+| Meses de suelo desnudo con lluvia | 35 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 |
+| Labranza | 25 | cero 0 · mínima 50 · convencional 100 |
+| Pendiente | 25 | plana 0 · ondulada 50 · fuerte 100 |
+| **Vínculo con Fertilización:** fracción de N + P₂O₅ aplicada sobre suelo desnudo en meses de lluvia (solo con plan) | 15 | ≤ 0 → 0 · ≤ 0.25 → 50 · mayor → 100 |
 
 ## Cadenas tróficas
 
@@ -61,7 +63,8 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 
 ## Plan de fertilización (pestaña Fertilización)
 
-- Nutriente aplicado (kg/ha) = dosis de producto (kg/ha) × grado (%) ÷ 100. El grado N-P₂O₅-K₂O viene en la etiqueta.
-- Unidades: 1 quintal = 100 lb = 45.359237 kg; 1 manzana = 10 000 varas² = 0.69873 ha; 1 qq/mz ≈ 64.9 kg/ha.
-- Costo por ha = dosis ÷ 45.36 × precio por quintal. Costo por kg de N = precio por quintal ÷ (45.36 × grado de N). Método de comparación: UT Extension, Fertilizer Cost Calculator v1.0 (University of Tennessee).
+- Se escribe a mano o se carga una plantilla Excel/CSV (columnas Mes, Producto, Dosis, Unidad, Método).
+- Nutriente aplicado (kg/ha) = dosis de producto (kg/ha) × grado (%) ÷ 100. El grado N-P₂O₅-K₂O viene en la etiqueta. Conversión de grado a producto verificada contra UT Extension, Fertilizer Cost Calculator v1.0 (University of Tennessee).
+- Unidades: 1 quintal = 100 lb = 45.359237 kg; 1 manzana = 10 000 varas² = 0.69873 ha; 1 qq/mz ≈ 64.9 kg/ha; 1 lb/acre ≈ 1.121 kg/ha.
 - Los objetivos por nutriente los pone el usuario (análisis de suelo o agrónomo); la app no recomienda dosis.
+- Objetivo de sostenibilidad: el plan alimenta Fertilización y, por sus efectos en el ecosistema, Suelo y Agua. El vínculo con Polinizadores queda pendiente de las variables de Kuniyoshi (2025).

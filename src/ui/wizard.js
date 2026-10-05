@@ -45,7 +45,7 @@ export function viewWizard(){
   </div>${!plan&&f.nAplicado>0&&!f.nObjetivo?'<p class="warnmsg">Sin objetivo de nitrógeno no se puede saber si la dosis es alta.</p>':''}
   ${plan?`<p class="notice"><span>Tu fertilización sale del plan detallado: <b>${conPlan(f).nAplicado} kg N/ha</b> en ${mlist(conPlan(f).fertMeses)}.</span><button class="btn sm" data-view="fertilizacion">Ver plan</button></p>`
     :`<div class="f"><span class="label">Meses de fertilización</span>${months('farm.fertMeses',f.fertMeses)}</div>
-  <p class="muted small">¿Quieres un análisis completo (N, P, K, método, costos)? <button class="btn sm" data-view="fertilizacion">Detallar en Fertilización</button></p>`}
+  <p class="muted small">¿Quieres un análisis completo (N, P, K, método y efectos en suelo y agua)? <button class="btn sm" data-view="fertilizacion">Detallar en Fertilización</button></p>`}
   <h3>Plaguicidas</h3>
   <div class="list">${f.plaguicidas.map((p,i)=>`<div class="item"><span class="grow"><b>${esc(p.producto)}</b> · ${{amplio:'Amplio espectro',selectivo:'Selectivo',biologico:'Biológico'}[p.clase]} · ${mlist(p.meses)}</span>${ed('plaguicidas',i)}</div>`).join('')||'<p class="muted">Sin plaguicidas registrados.</p>'}</div>
   <div class="subform"><div class="fields">${field('q-prod','Producto','draftPlag.producto',S.draftPlag.producto)}${select('q-clase','Clase','draftPlag.clase',S.draftPlag.clase,[['amplio','Amplio espectro'],['selectivo','Selectivo'],['biologico','Biológico']])}</div>

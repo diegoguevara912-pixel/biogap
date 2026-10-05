@@ -25,10 +25,10 @@ export function demoFarm() {
     riego: 'gravedad', nAplicado: 180, nObjetivo: 150, pObjetivo: 60, kObjetivo: 60, fertMeses: [0, 1, 5, 6], lluviaMeses: [5, 6, 8, 9],
     // Plan de fertilización (ficticio). Dosis en kg de producto por ha; grado en %.
     fertPlan: [
-      { mes: 0, producto: '15-15-15', n: 15, p: 15, k: 15, dosis: 300, metodo: 'incorporado', precioQQ: null },
-      { mes: 1, producto: 'urea', n: 46, p: 0, k: 0, dosis: 100, metodo: 'voleo', precioQQ: null },
-      { mes: 5, producto: 'urea', n: 46, p: 0, k: 0, dosis: 100, metodo: 'voleo', precioQQ: null },
-      { mes: 6, producto: 'nitrato-amonio', n: 34, p: 0, k: 0, dosis: 127, metodo: 'voleo', precioQQ: null },
+      { mes: 0, producto: '15-15-15', n: 15, p: 15, k: 15, dosis: 300, metodo: 'incorporado' },
+      { mes: 1, producto: 'urea', n: 46, p: 0, k: 0, dosis: 100, metodo: 'voleo' },
+      { mes: 5, producto: 'urea', n: 46, p: 0, k: 0, dosis: 100, metodo: 'voleo' },
+      { mes: 6, producto: 'nitrato-amonio', n: 34, p: 0, k: 0, dosis: 127, metodo: 'voleo' },
     ],
     plaguicidas: [
       { producto: 'Insecticida de amplio espectro', clase: 'amplio', meses: [1, 2] },
@@ -58,7 +58,7 @@ export const blankDrafts = () => ({
   draftCult: { nombre: '', ha: 0, siembra: [], cosecha: [] },
   draftNC: { criterio: '', dias: 0 },
   draftRow: { fecha: '', lote: '', valor: '' },
-  draftFert: { mes: 0, producto: 'urea', n: 46, p: 0, k: 0, dosis: '', metodo: 'incorporado', precioQQ: '' },
+  draftFert: { mes: 0, producto: 'urea', n: 46, p: 0, k: 0, dosis: '', metodo: 'incorporado' },
 });
 
 // Tipos de plantilla de registro.
@@ -80,6 +80,7 @@ export const S = {
   ajustes: { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } },
   msg: '',
   casos: [],
+  fertImport: null, // último archivo de fertilización cargado: { archivo, hoja, omitidas, avisos }
   fertUnidad: 'kgha', // unidad de dosis en la pestaña Fertilización: kgha | qqmz // casos guardados por el usuario en este navegador (memoria de casos)
   // Módulo de riego: datos de entrada, de dónde salieron y lo que el archivo traía calculado.
   riego: { datos: casoEjemplo(), fuente: 'ejemplo', archivo: '', origen: {}, declarados: declaradosEjemplo(), faltan: [], omitidas: [] },
