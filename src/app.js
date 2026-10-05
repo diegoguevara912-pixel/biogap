@@ -1,12 +1,14 @@
 // Punto de entrada: renderizado y eventos.
 import { uniq } from './core/utils.js';
 import { S, demoFarm, emptyFarm, blankDrafts } from './core/state.js';
-import { exportarTexto, importarTexto, guardarLocal, cargarLocal, configBase } from './core/storage.js';
+import { exportarTexto, importarTexto, guardarLocal, cargarLocal, configBase, cargarCasos, guardarCasos, normalizarFinca } from './core/storage.js';
 import { viewDashboard } from './ui/dashboard.js';
 import { viewWizard, STEPS } from './ui/wizard.js';
 import { viewTemplates } from './ui/templates.js';
 import { viewSettings } from './ui/settings.js';
 import { viewRiego } from './ui/riego.js';
+import { viewCasos } from './ui/casos.js';
+import { nombreCultivoPrincipal } from './casos/perfil.js';
 import { casoEjemplo, riegoVacio, declaradosEjemplo } from './riego/calculo.js';
 import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
 import { leerCsv } from './riego/csv.js';
@@ -15,6 +17,7 @@ import { extraerRiego } from './riego/extraer.js';
 // Recupera lo último guardado en este navegador (finca, ajustes, plantillas, plan y tema).
 const previo = cargarLocal(S.tpl);
 if (previo) Object.assign(S, previo);
+S.casos = cargarCasos();
 
 function applyTheme(){const r=document.documentElement;if(S.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',S.theme);
   const b=document.getElementById('theme-btn');if(b)b.textContent='Tema: '+({system:'sistema',light:'claro',dark:'oscuro'}[S.theme]);}
@@ -23,7 +26,7 @@ function render(){
   // Conserva el foco y el cursor del campo que se estaba editando.
   const ae=document.activeElement;const id=ae&&ae.id;let ss=null;try{ss=ae&&ae.selectionStart;}catch(e){}
   const app=document.getElementById('app');
-  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,ajustes:viewSettings};
+  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,casos:viewCasos,ajustes:viewSettings};
   app.innerHTML=(views[S.view]||viewDashboard)();
   S.msg='';
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===S.view?'page':'false'));
@@ -75,6 +78,11 @@ document.addEventListener('click',e=>{
   else if(act==='import'){abrirArchivo();return;}
   else if(act==='toggle-mod'){const id=a.dataset.id,on=S.ajustes.modulosActivos;S.ajustes.modulosActivos=on.includes(id)?on.filter(x=>x!==id):[...on,id];}
   else if(act==='reset-ajustes'){S.ajustes=configBase();}
+  else if(act==='caso-guardar'){
+    const finca=normalizarFinca(structuredClone(f));const cult=nombreCultivoPrincipal(finca);
+    S.casos.push({id:'propio-'+Date.now().toString(36),origen:S.demo?'ejemplo':'propio',etiqueta:`${finca.nombre||'Finca sin nombre'}${cult?' · '+cult:''}`,guardado:new Date().toISOString(),finca});
+    S.msg=guardarCasos(S.casos)?`Caso guardado. La memoria tiene ${S.casos.length} caso(s) tuyos.`:'El caso quedó en esta sesión, pero el navegador no permitió guardarlo.';}
+  else if(act==='caso-rm'){S.casos=S.casos.filter(c=>c.id!==a.dataset.id);guardarCasos(S.casos);S.msg='Caso quitado de la memoria.';}
   else if(act==='riego-import'){importarRiego();return;}
   else if(act==='riego-ejemplo'){S.riego={datos:casoEjemplo(),fuente:'ejemplo',archivo:'',origen:{},declarados:declaradosEjemplo(),faltan:[],omitidas:[]};}
   else if(act==='riego-blanco'){S.riego={datos:riegoVacio(),fuente:'manual',archivo:'',origen:{},declarados:{},faltan:[],omitidas:[]};}
@@ -88,7 +96,8 @@ document.addEventListener('click',e=>{
   render();if(['next','prev','finish','start-empty','load-demo','reset-yes'].includes(act))window.scrollTo(0,0);
 });
 function bindValue(el){const[o,k]=getRef(el.dataset.bind);
-  if(el.type==='checkbox')o[k]=el.checked;else if(el.type==='number')o[k]=el.value===''?('nullable' in el.dataset?null:0):Number(el.value);else o[k]=el.value;
+  if('lines' in el.dataset)o[k]=el.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,30);
+  else if(el.type==='checkbox')o[k]=el.checked;else if(el.type==='number')o[k]=el.value===''?('nullable' in el.dataset?null:0):Number(el.value);else o[k]=el.value;
   if(el.dataset.bind.startsWith('farm.'))S.demo=false;}
 document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.bind){bindValue(e.target);guardarLocal(S);}});
 document.addEventListener('change',e=>{const el=e.target;

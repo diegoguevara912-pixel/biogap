@@ -6,6 +6,7 @@ import { CONFIG } from '../core/config.js';
 import { evaluar, simular, nivel } from '../core/engine.js';
 import { configEfectiva, normalizarAjustes } from '../core/storage.js';
 import { gauge, radar, pressureChart, calRow, dlt } from './charts.js';
+import { panelVecinosDashboard } from './casos.js';
 
 export function viewDashboard(){
   const cfg=configEfectiva(normalizarAjustes(S.ajustes));
@@ -91,6 +92,7 @@ export function viewDashboard(){
   <section class="panel"><div class="row between"><div><h2>Plan de acción</h2><p class="muted">Ordenado por riesgo del módulo. Marca lo que ya hiciste.</p></div>${recs.length?`<span class="pill Bajo" style="color:var(--ink)">${doneN} de ${recs.length} hechas</span>`:''}</div>
     ${recs.length?`<ul class="plan">${recs.map((x,i)=>`<li class="${S.done[x.k]?'done':''}"><input type="checkbox" id="rec-${i}" data-done="${esc(x.k)}" ${S.done[x.k]?'checked':''} aria-label="Marcar como hecha"><span class="tag">${x.m} · ${x.lv}</span><label class="txt" for="rec-${i}">${esc(x.r)}</label></li>`).join('')}</ul>`:'<p class="muted">No hay recomendaciones con los datos actuales.</p>'}
   </section>
+  ${panelVecinosDashboard()}
   ${gg?`<section class="panel">
     <div><h2>Panel GLOBALG.A.P. IFA v6</h2><p class="muted">Guía de referencia. No reemplaza la auditoría ni garantiza el resultado.</p></div>
     <div class="grid2">

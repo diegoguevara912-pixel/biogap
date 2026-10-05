@@ -30,4 +30,14 @@ export const CONFIG = {
 
   // Reglas GLOBALG.A.P. IFA v6 usadas por el panel de certificación.
   globalgap: { margenMinorMusts: 0.05, diasCierreNC: 28 },
+
+  // Memoria de casos (k-NN). Criterio propio, por calibrar con casos reales (Etapa 3).
+  casos: {
+    k: 3, // fincas parecidas que se muestran
+    // Peso de cada rasgo del perfil (suman 1). "scores" se reparte entre los módulos activos.
+    pesos: { cultivo: 0.2, riego: 0.1, pendiente: 0.1, distAgua: 0.1, propNativas: 0.1, mesesCoincidencia: 0.1, scores: 0.3 },
+    topeDistAgua: 500, // m; más allá, la distancia ya no distingue fincas
+    umbralParecido: 0.1, // distancia de un rasgo hasta la que se considera "parecido"
+    coberturaMinima: 0.5, // fracción del peso que debe poder compararse
+  },
 };
