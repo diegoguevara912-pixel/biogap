@@ -2,7 +2,7 @@
 // Todo lo que entra desde un archivo se valida campo por campo contra la finca vacía,
 // así un archivo viejo, incompleto o editado a mano nunca rompe la app.
 
-import { emptyFarm, TPL } from './state.js';
+import { emptyFarm, TPL, tiposPlantilla } from './state.js';
 import { CONFIG } from './config.js';
 import { MODULOS } from '../modules/index.js';
 
@@ -106,9 +106,11 @@ export const configEfectiva = (ajustes) => ({ ...CONFIG, ...ajustes });
 // Registros de plantillas: solo filas con fecha, lote y valor numérico.
 export function normalizarTpl(o, base) {
   if (!o || typeof o !== 'object') return base;
+  // Respaldos antiguos con fertilización o riego: esos registros ya no viven en Plantillas.
+  if (TPL[o.tipo]?.pestana) return base;
   const rows = Array.isArray(o.rows) ? o.rows.slice(0, 5000).filter((r) => r && typeof r.valor === 'number' && Number.isFinite(r.valor))
     .map((r) => ({ fecha: txt(r.fecha), lote: txt(r.lote), valor: r.valor })) : base.rows;
-  return { tipo: opcion(o.tipo, Object.keys(TPL), base.tipo), objetivo: num(o.objetivo, base.objetivo), rows, paste: '' };
+  return { tipo: opcion(o.tipo, tiposPlantilla(), base.tipo), objetivo: num(o.objetivo, base.objetivo), rows, paste: '' };
 }
 // Recomendaciones marcadas como hechas: { clave: true }.
 const normalizarHechas = (o) => (o && typeof o === 'object' && !Array.isArray(o)
@@ -125,7 +127,7 @@ export function importarTexto(texto) {
   try { o = JSON.parse(texto); } catch { throw new Error('El archivo no es un JSON válido.'); }
   if (!o || o.formato !== FORMATO) throw new Error('El archivo no es una finca de BioG.A.P.');
   if (typeof o.version !== 'number' || o.version > VERSION) throw new Error('El archivo viene de una versión más nueva de la app.');
-  return { farm: normalizarFinca(o.finca), ajustes: normalizarAjustes(o.ajustes), tpl: o.plantillas ? normalizarTpl(o.plantillas, { tipo: 'fert', objetivo: 0, rows: [], paste: '' }) : null };
+  return { farm: normalizarFinca(o.finca), ajustes: normalizarAjustes(o.ajustes), tpl: o.plantillas ? normalizarTpl(o.plantillas, { tipo: 'mec', objetivo: 0, rows: [], paste: '' }) : null };
 }
 
 // Autoguardado en el navegador. Falla en silencio si el navegador lo bloquea.
