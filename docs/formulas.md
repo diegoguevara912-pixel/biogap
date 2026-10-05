@@ -75,6 +75,13 @@ Basado en Kuniyoshi (2025) y Osorio (2025), PEG de Zamorano. Kuniyoshi encontró
 - Los objetivos por nutriente los pone el usuario (análisis de suelo o agrónomo); la app no recomienda dosis.
 - Objetivo de sostenibilidad: el plan alimenta Fertilización y, por sus efectos en el ecosistema, Suelo y Agua. Con Polinizadores se vincula por las aplicaciones foliares en floración visitada.
 
+## Mapa de la finca (Issue #10)
+
+- Proyección Web Mercator con teselas de 256 px (esquema "slippy map" de OpenStreetMap).
+- Área del contorno sobre la esfera (Chamberlain y Duquette 2007, JPL Publication 07-03): A = |Σ (λᵢ₊₁ − λᵢ)·(2 + sen φᵢ + sen φᵢ₊₁)| · R² / 2, con R = 6 378 137 m. Probada contra la fórmula exacta de un rectángulo lat-lon.
+- Avisos (criterio propio): punto fuera del rectángulo aproximado de Honduras (y si con la longitud en negativo cae dentro, sugiere el signo menos); área dibujada vs. declarada con diferencia > 20 %.
+- El mapa **no** alimenta ninguna rúbrica todavía: ninguna variable cambia por el contorno. Usarlo (por ejemplo, para el clima del Issue #8 o la distancia real a fuentes de agua) necesita su propio fundamento.
+
 ## Fuentes de los vínculos ecológicos
 
 - Kuniyoshi Aguilar, A. S. (2025; publicado en 2026). *Fenología de Spathodea campanulata en el campus de la Universidad Zamorano y presencia de abejas muertas asociadas a sus flores.* PEG, Zamorano.

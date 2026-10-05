@@ -25,8 +25,9 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 7. **Memoria de casos (k-NN)**: compara tu finca con los casos guardados por cultivo, riego, pendiente, distancia al agua, especies nativas, meses de coincidencia y riesgo por módulo. Muestra las 3 más parecidas, en qué se parecen, qué hicieron y cómo les fue (no conformidades GLOBALG.A.P. y lámina aplicada/requerida, antes y después). Trae 9 casos de **ejemplo** (ficticios, marcados así en pantalla) y permite guardar tu finca como caso.
 8. **Plan de fertilización**: cada aplicación con producto (grado N-P₂O₅-K₂O), dosis en kg/ha o qq/mz, mes y método. Calcula N, P₂O₅ y K₂O frente al objetivo, N por mes frente a la lluvia, efectos en Suelo y Agua; se escribe a mano o se carga una plantilla Excel/CSV.
 9. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
+10. **Mapa satelital de la finca** (debajo del perfil de riesgo): ubicar la finca por coordenadas, tocando el mapa o con el GPS del dispositivo, y dibujar su contorno para calcular el área. Avisa si el punto cae fuera de Honduras o si el área dibujada difiere más de 20 % de la declarada. Imagen EOxCloudless (Sentinel-2, ~10 m): uso no comercial con atribución; un uso comercial necesita licencia de EOX.
 
-Los datos de la finca se guardan solo en el navegador del usuario. No se envían a ningún servidor.
+Los datos de la finca se guardan solo en el navegador del usuario. No se envían a ningún servidor. Las coordenadas del mapa se guardan aparte y **no** van en el archivo exportado ni en la memoria de casos; el navegador sí descarga las imágenes del servicio de EOX según la zona que se mira.
 
 ## Cómo verla
 
@@ -58,6 +59,7 @@ src/
 │  ├─ perfil.js         rasgos comparables de una finca
 │  ├─ memoria.js        similitud, k-NN y resumen del resultado
 │  └─ ejemplos.js       9 casos de ejemplo (ficticios)
+├─ mapa/               geo.js (proyección, teselas, área, avisos) y ubicacion.js (guardado aparte)
 ├─ fert/               plan de fertilización: catálogo, nutrientes, costos y hallazgos
 ├─ riego/              módulo de riego por goteo
 │  ├─ referencias.js    valores con fuente (FAO-56, CIMMYT)
@@ -93,6 +95,7 @@ Este repositorio es la **única versión oficial**. Cualquier asistente (Claude 
 - [x] v0.3: guardar y cargar fincas (JSON) y ajustes por finca (módulos activos y umbrales)
 - [x] v0.4: módulo de riego (calculadora, validador e importador de Excel/CSV), validado con el diseño agronómico del Lab de Riego
 - [x] v0.5: diseño mejorado (índice global, simulador, plan de acción, presión por mes, tema oscuro, edición en el cuestionario, respaldo en texto)
+- [x] Mapa satelital con contorno y área (Issue #10)
 - [ ] Guardar los datos de riego con la finca (hoy se pierden al recargar la página)
 - [ ] Diseño hidráulico y cubicación de reservorio
 - [ ] Más cultivos en `src/riego/referencias.js` (hoy solo maíz)
