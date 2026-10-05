@@ -4,6 +4,14 @@
 // Los pesos y cortes son criterio propio salvo que se indique la fuente; están por calibrar con datos reales.
 
 export const CONFIG = {
+  // Propósitos de manejo para fincas sin cultivos: cada uno enfoca el dashboard en sus módulos.
+  // Para agregar uno nuevo basta con sumarlo aquí.
+  propositos: [
+    { id: 'polinizadores', nombre: 'Manejo de polinizadores', detalle: 'Abejas nativas, especies de riesgo y enemigos naturales', modulos: ['poli', 'troficas'] },
+    { id: 'hidrografico', nombre: 'Manejo hidrográfico', detalle: 'Fuentes de agua, escorrentía y suelo', modulos: ['agua', 'suelo'] },
+    { id: 'riego', nombre: 'Manejo de riego', detalle: 'Diseño y eficiencia del riego', modulos: ['agua'] },
+  ],
+
   // Módulos activos, en el orden en que aparecen en el dashboard.
   modulosActivos: ['poli', 'fert', 'agua', 'suelo', 'troficas'],
 
