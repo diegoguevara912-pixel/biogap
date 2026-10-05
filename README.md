@@ -23,7 +23,8 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 5. **Ajustes** para activar o desactivar módulos y mover los umbrales de riesgo. Tema claro, oscuro o del sistema.
 6. **Guardar y cargar**: autoguardado en el navegador y exportar o importar la finca como archivo `.json`.
 7. **Memoria de casos (k-NN)**: compara tu finca con los casos guardados por cultivo, riego, pendiente, distancia al agua, especies nativas, meses de coincidencia y riesgo por módulo. Muestra las 3 más parecidas, en qué se parecen, qué hicieron y cómo les fue (no conformidades GLOBALG.A.P. y lámina aplicada/requerida, antes y después). Trae 9 casos de **ejemplo** (ficticios, marcados así en pantalla) y permite guardar tu finca como caso.
-8. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
+8. **Plan de fertilización**: cada aplicación con producto (grado N-P₂O₅-K₂O), dosis en kg/ha o qq/mz, mes, método y precio. Calcula N, P₂O₅ y K₂O frente al objetivo, N por mes frente a la lluvia, costo por ha y la fuente de N más barata por kg de N (método de UT Extension).
+9. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
 
 Los datos de la finca se guardan solo en el navegador del usuario. No se envían a ningún servidor.
 
@@ -57,6 +58,7 @@ src/
 │  ├─ perfil.js         rasgos comparables de una finca
 │  ├─ memoria.js        similitud, k-NN y resumen del resultado
 │  └─ ejemplos.js       9 casos de ejemplo (ficticios)
+├─ fert/               plan de fertilización: catálogo, nutrientes, costos y hallazgos
 ├─ riego/              módulo de riego por goteo
 │  ├─ referencias.js    valores con fuente (FAO-56, CIMMYT)
 │  ├─ calculo.js        fórmulas del diseño agronómico

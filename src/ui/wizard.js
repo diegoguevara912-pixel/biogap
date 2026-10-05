@@ -2,6 +2,7 @@
 import { esc, mlist } from '../core/utils.js';
 import { S } from '../core/state.js';
 import { months, field, select } from './components.js';
+import { conPlan } from '../fert/calculo.js';
 
 export const STEPS=['Finca','Cultivos','Especies','Prácticas','Calendarios','Certificación'];
 export function viewWizard(){
@@ -35,13 +36,16 @@ export function viewWizard(){
     <div class="row"><label class="check"><input id="e-atrae" type="checkbox" data-bind="draftEsp.atrae" ${S.draftEsp.atrae?'checked':''}> Atrae polinizadores</label>
     <label class="check"><input id="e-riesgo" type="checkbox" data-bind="draftEsp.riesgo" ${S.draftEsp.riesgo?'checked':''}> Es un riesgo para polinizadores</label></div>
     <div><button class="btn" data-act="add-esp">Agregar especie</button></div></div>`;
+  const plan=f.fertPlan.length>0;
   if(s===3)body=`<h2>¿Qué prácticas agrícolas usas?</h2><div class="fields">
     ${select('p-riego','Sistema de riego','farm.riego',f.riego,[['gravedad','Gravedad'],['aspersion','Aspersión'],['goteo','Goteo'],['ninguno','Sin riego']])}
     ${select('p-lab','Labranza','farm.labranza',f.labranza,[['convencional','Convencional'],['minima','Mínima'],['cero','Cero labranza']])}
-    ${field('p-n','Nitrógeno aplicado por año','farm.nAplicado',f.nAplicado,'number','kg N/ha')}
-    ${field('p-nobj','Objetivo de nitrógeno de la finca','farm.nObjetivo',f.nObjetivo,'number','kg N/ha, según tu plan o tu agrónomo')}
-  </div>${f.nAplicado>0&&!f.nObjetivo?'<p class="warnmsg">Sin objetivo de nitrógeno el cálculo asume que la dosis es alta.</p>':''}
-  <div class="f"><span class="label">Meses de fertilización</span>${months('farm.fertMeses',f.fertMeses)}</div>
+    ${plan?'':field('p-n','Nitrógeno aplicado por año','farm.nAplicado',f.nAplicado,'number','kg N/ha')}
+    ${field('p-nobj','Objetivo de nitrógeno de la finca','farm.nObjetivo',f.nObjetivo,'number','kg N/ha por ciclo: de tu análisis de suelo o tu agrónomo')}
+  </div>${!plan&&f.nAplicado>0&&!f.nObjetivo?'<p class="warnmsg">Sin objetivo de nitrógeno no se puede saber si la dosis es alta.</p>':''}
+  ${plan?`<p class="notice"><span>Tu fertilización sale del plan detallado: <b>${conPlan(f).nAplicado} kg N/ha</b> en ${mlist(conPlan(f).fertMeses)}.</span><button class="btn sm" data-view="fertilizacion">Ver plan</button></p>`
+    :`<div class="f"><span class="label">Meses de fertilización</span>${months('farm.fertMeses',f.fertMeses)}</div>
+  <p class="muted small">¿Quieres un análisis completo (N, P, K, método, costos)? <button class="btn sm" data-view="fertilizacion">Detallar en Fertilización</button></p>`}
   <h3>Plaguicidas</h3>
   <div class="list">${f.plaguicidas.map((p,i)=>`<div class="item"><span class="grow"><b>${esc(p.producto)}</b> · ${{amplio:'Amplio espectro',selectivo:'Selectivo',biologico:'Biológico'}[p.clase]} · ${mlist(p.meses)}</span>${ed('plaguicidas',i)}</div>`).join('')||'<p class="muted">Sin plaguicidas registrados.</p>'}</div>
   <div class="subform"><div class="fields">${field('q-prod','Producto','draftPlag.producto',S.draftPlag.producto)}${select('q-clase','Clase','draftPlag.clase',S.draftPlag.clase,[['amplio','Amplio espectro'],['selectivo','Selectivo'],['biologico','Biológico']])}</div>

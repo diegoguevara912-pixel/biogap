@@ -8,6 +8,8 @@ import { viewTemplates } from './ui/templates.js';
 import { viewSettings } from './ui/settings.js';
 import { viewRiego } from './ui/riego.js';
 import { viewCasos } from './ui/casos.js';
+import { viewFertilizacion } from './ui/fertilizacion.js';
+import { producto, UNIDADES } from './fert/catalogo.js';
 import { nombreCultivoPrincipal } from './casos/perfil.js';
 import { casoEjemplo, riegoVacio, declaradosEjemplo } from './riego/calculo.js';
 import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
@@ -26,7 +28,7 @@ function render(){
   // Conserva el foco y el cursor del campo que se estaba editando.
   const ae=document.activeElement;const id=ae&&ae.id;let ss=null;try{ss=ae&&ae.selectionStart;}catch(e){}
   const app=document.getElementById('app');
-  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,casos:viewCasos,ajustes:viewSettings};
+  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,fertilizacion:viewFertilizacion,casos:viewCasos,ajustes:viewSettings};
   app.innerHTML=(views[S.view]||viewDashboard)();
   S.msg='';
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===S.view?'page':'false'));
@@ -78,6 +80,15 @@ document.addEventListener('click',e=>{
   else if(act==='import'){abrirArchivo();return;}
   else if(act==='toggle-mod'){const id=a.dataset.id,on=S.ajustes.modulosActivos;S.ajustes.modulosActivos=on.includes(id)?on.filter(x=>x!==id):[...on,id];}
   else if(act==='reset-ajustes'){S.ajustes=configBase();}
+  else if(act==='fert-unidad'){S.fertUnidad=UNIDADES[a.dataset.u]?a.dataset.u:'kgha';}
+  else if(act==='add-fert'){const d=S.draftFert,dos=Number(d.dosis);if(!(dos>0)){S.msg='Escribe una dosis mayor que cero.';render();return;}
+    const g=producto(d.producto),otro=g.id==='otro',pct=x=>Math.min(100,Math.max(0,Number(x)||0));
+    f.fertPlan.push({mes:Number(d.mes)||0,producto:g.id,n:otro?pct(d.n):g.n,p:otro?pct(d.p):g.p,k:otro?pct(d.k):g.k,
+      dosis:dos*UNIDADES[S.fertUnidad].aKgHa,metodo:d.metodo,precioQQ:Number(d.precioQQ)>0?Number(d.precioQQ):null});
+    f.fertPlan.sort((x,y)=>x.mes-y.mes);S.draftFert={...d,dosis:'',precioQQ:d.precioQQ};S.demo=false;}
+  else if(act==='rm-fert'){f.fertPlan.splice(+a.dataset.i,1);S.demo=false;}
+  else if(act==='edit-fert'){const x=f.fertPlan.splice(+a.dataset.i,1)[0];
+    S.draftFert={mes:x.mes,producto:x.producto,n:x.n,p:x.p,k:x.k,dosis:+(x.dosis/UNIDADES[S.fertUnidad].aKgHa).toFixed(2),metodo:x.metodo,precioQQ:x.precioQQ??''};}
   else if(act==='caso-guardar'){
     const finca=normalizarFinca(structuredClone(f));const cult=nombreCultivoPrincipal(finca);
     S.casos.push({id:'propio-'+Date.now().toString(36),origen:S.demo?'ejemplo':'propio',etiqueta:`${finca.nombre||'Finca sin nombre'}${cult?' · '+cult:''}`,guardado:new Date().toISOString(),finca});

@@ -28,10 +28,13 @@ export const CONFIG = {
       abejasNativas: { peso: 15 }, // receptor: abejas nativas registradas
     },
     fert: {
-      dosis: { peso: 35, cortes: [1, 1.2] }, // N aplicado / N objetivo
-      lluvia: { peso: 25, cortes: [0, 0.5] }, // fracción de fertilizaciones en meses de lluvia fuerte
-      pendiente: { peso: 20 },
-      distancia: { peso: 20, cortes: [100, 30], inverso: true }, // m al cuerpo de agua
+      dosis: { peso: 30, cortes: [1, 1.2] }, // N aplicado / N objetivo
+      lluvia: { peso: 20, cortes: [0, 0.5] }, // fracción del N (o de las fertilizaciones) en meses de lluvia fuerte
+      fraccionamiento: { peso: 10, cortes: [0.5, 0.75] }, // mayor fracción del N aplicada en un solo mes (plan)
+      metodo: { peso: 10, cortes: [0, 0.5] }, // fracción del N como urea al voleo sin incorporar (plan)
+      fosforo: { peso: 10, cortes: [1, 1.2] }, // P2O5 aplicado / P2O5 objetivo (plan)
+      pendiente: { peso: 10 },
+      distancia: { peso: 10, cortes: [100, 30], inverso: true }, // m al cuerpo de agua
     },
     agua: {
       sistema: { peso: 25 }, // sistema de riego según su eficiencia de aplicación (FAO)

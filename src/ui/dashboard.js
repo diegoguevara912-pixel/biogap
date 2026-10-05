@@ -7,6 +7,7 @@ import { evaluar, simular, nivel } from '../core/engine.js';
 import { configEfectiva, normalizarAjustes } from '../core/storage.js';
 import { gauge, radar, pressureChart, calRow, dlt } from './charts.js';
 import { panelVecinosDashboard } from './casos.js';
+import { conPlan } from '../fert/calculo.js';
 import { ESTADOS } from '../core/rubrica.js';
 import { calcular } from '../riego/calculo.js';
 import { validar } from '../riego/reglas.js';
@@ -28,7 +29,7 @@ function tablaRubrica(m){
 
 export function viewDashboard(){
   const cfg=configEfectiva(normalizarAjustes(S.ajustes));
-  const f=S.farm,X=extraRiego(),R=evaluar(f,cfg,X),mods=R.mods;
+  const f=conPlan(S.farm),X=extraRiego(),R=evaluar(f,cfg,X),mods=R.mods;
   if(!mods.length)return `<section class="panel"><h2>No hay módulos activos</h2><p class="muted">Activa al menos uno en Ajustes.</p></section>`;
   const top=[...mods].sort((a,b)=>b.score-a.score)[0];
   const hotM=R.mh.map((a,i)=>[i,a.length]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);

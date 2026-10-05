@@ -6,6 +6,7 @@ import { CONFIG } from './config.js';
 import { uniq, inter } from './utils.js';
 import { MODULOS } from '../modules/index.js';
 import { puntuar } from './rubrica.js';
+import { conPlan, nutrientes } from '../fert/calculo.js';
 
 export const nivel = (v, cfg = CONFIG) => (v >= cfg.niveles.alto ? 'Alto' : v >= cfg.niveles.medio ? 'Medio' : 'Bajo');
 
@@ -24,7 +25,8 @@ export function contexto(f, extra = {}) {
   return { atraeFlor, riesgoFlor, aplic, amplio, plagaM, cosechaM, siembraM, nativasFauna, ov1, riego: extra.riego ?? null };
 }
 
-export function evaluar(f, cfg = CONFIG, extra = {}) {
+export function evaluar(f0, cfg = CONFIG, extra = {}) {
+  const f = conPlan(f0); // con plan de fertilización, el N y sus meses salen del plan
   const ctx = contexto(f, extra);
   const helpers = { cfg };
   const mods = cfg.modulosActivos
@@ -55,7 +57,12 @@ export function evaluar(f, cfg = CONFIG, extra = {}) {
 export function simular(f, sim, cfg = CONFIG, extra = {}) {
   const g = structuredClone(f);
   const base = contexto(f);
-  if (sim.n && g.nObjetivo > 0) g.nAplicado = Math.min(g.nAplicado, g.nObjetivo);
+  if (sim.n && g.nObjetivo > 0) {
+    // Con plan: reduce en la misma proporción las aplicaciones que llevan N.
+    const nPlan = g.fertPlan?.reduce((s, a) => s + nutrientes(a).n, 0) ?? 0;
+    if (nPlan > g.nObjetivo) g.fertPlan.forEach((a) => { if (a.n > 0) a.dosis *= g.nObjetivo / nPlan; });
+    g.nAplicado = Math.min(g.nAplicado, g.nObjetivo);
+  }
   if (sim.pol) g.plaguicidas.forEach((p) => { if (p.clase !== 'biologico') p.meses = p.meses.filter((m) => !base.atraeFlor.includes(m)); });
   if (sim.riego && (g.riego === 'gravedad' || g.riego === 'aspersion')) g.riego = 'goteo';
   if (sim.suelo) { g.sueloDesnudoMeses = []; if (g.labranza === 'convencional') g.labranza = 'minima'; }

@@ -25,10 +25,13 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 
 | Variable | Peso | Puntaje |
 |---|---|---|
-| N aplicado / N objetivo | 35 | ≤ 1 → 0 · ≤ 1.2 → 50 · mayor → 100 |
-| Fracción de fertilizaciones en meses de lluvia fuerte | 25 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
-| Pendiente | 20 | plana 0 · ondulada 50 · fuerte 100 |
-| Distancia al cuerpo de agua (m) | 20 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
+| N aplicado / N objetivo | 30 | ≤ 1 → 0 · ≤ 1.2 → 50 · mayor → 100 |
+| Fracción del N (con plan) o de las fertilizaciones en meses de lluvia fuerte | 20 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Mayor fracción del N aplicada en un solo mes (requiere plan) | 10 | ≤ 0.5 → 0 · ≤ 0.75 → 50 · mayor → 100 |
+| Fracción del N como urea al voleo sin incorporar (requiere plan) | 10 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| P₂O₅ aplicado / P₂O₅ objetivo (requiere plan) | 10 | ≤ 1 → 0 · ≤ 1.2 → 50 · mayor → 100 |
+| Pendiente | 10 | plana 0 · ondulada 50 · fuerte 100 |
+| Distancia al cuerpo de agua (m) | 10 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
 
 ## Agua
 
@@ -56,3 +59,9 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 | Fracción de especies silvestres nativas | 25 | ≥ 0.6 → 0 · ≥ 0.3 → 50 · menor → 100 |
 | Meses con aplicación en cosecha | 15 | ≤ 0 → 0 · ≤ 0 → 50 · mayor → 100 |
 
+## Plan de fertilización (pestaña Fertilización)
+
+- Nutriente aplicado (kg/ha) = dosis de producto (kg/ha) × grado (%) ÷ 100. El grado N-P₂O₅-K₂O viene en la etiqueta.
+- Unidades: 1 quintal = 100 lb = 45.359237 kg; 1 manzana = 10 000 varas² = 0.69873 ha; 1 qq/mz ≈ 64.9 kg/ha.
+- Costo por ha = dosis ÷ 45.36 × precio por quintal. Costo por kg de N = precio por quintal ÷ (45.36 × grado de N). Método de comparación: UT Extension, Fertilizer Cost Calculator v1.0 (University of Tennessee).
+- Los objetivos por nutriente los pone el usuario (análisis de suelo o agrónomo); la app no recomienda dosis.

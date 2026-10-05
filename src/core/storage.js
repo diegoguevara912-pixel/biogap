@@ -37,7 +37,12 @@ export function normalizarFinca(o) {
       floracion: meses(e.floracion), atrae: bool(e.atrae), riesgo: bool(e.riesgo),
     }),
     riego: opcion(o.riego, ['gravedad', 'aspersion', 'goteo', 'ninguno'], v.riego),
-    nAplicado: num(o.nAplicado), nObjetivo: num(o.nObjetivo),
+    nAplicado: num(o.nAplicado), nObjetivo: num(o.nObjetivo), pObjetivo: num(o.pObjetivo), kObjetivo: num(o.kObjetivo),
+    fertPlan: lista(o.fertPlan, (a) => a && esMes(a.mes) && num(a.dosis) > 0 && {
+      mes: a.mes, producto: txt(a.producto, 'otro').slice(0, 40), dosis: Math.min(num(a.dosis), 5000),
+      n: Math.min(num(a.n), 100), p: Math.min(num(a.p), 100), k: Math.min(num(a.k), 100),
+      metodo: opcion(a.metodo, ['incorporado', 'voleo', 'fertirriego', 'foliar'], 'voleo'), precioQQ: numONulo(a.precioQQ, 1e6),
+    }).slice(0, 60),
     fertMeses: meses(o.fertMeses), lluviaMeses: meses(o.lluviaMeses),
     plaguicidas: lista(o.plaguicidas, (p) => p && { producto: txt(p.producto), clase: opcion(p.clase, ['amplio', 'selectivo', 'biologico'], 'amplio'), meses: meses(p.meses) }),
     sueloDesnudoMeses: meses(o.sueloDesnudoMeses),
