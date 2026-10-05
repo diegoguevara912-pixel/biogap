@@ -1,5 +1,5 @@
 // Módulo: Polinizadores. Origen del proyecto: abejas muertas en flores de Spathodea campanulata.
-// Las variables siguen los factores que señalan Kuniyoshi (2026) y Osorio (2025):
+// Las variables siguen los factores que señalan Kuniyoshi (2025) y Osorio (2025):
 // abundancia floral de la especie de riesgo, exposición a agroquímicos, otras especies en floración
 // y disponibilidad de agua. Kuniyoshi no midió estos tres últimos: son hipótesis, y así se marcan.
 import { M } from '../core/utils.js';

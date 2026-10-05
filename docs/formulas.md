@@ -14,7 +14,7 @@ Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor �
 
 ## Polinizadores
 
-Basado en Kuniyoshi (2026) y Osorio (2025), PEG de Zamorano. Kuniyoshi encontró una relación positiva pero débil entre la abundancia floral de *Spathodea campanulata* y las abejas muertas (R² = 0.21, no significativa), y señaló como factores **no medidos** la exposición a agroquímicos, la disponibilidad de otras especies en floración, la disponibilidad de agua, el clima y la condición de las flores. Las variables basadas en esos factores son **hipótesis** y se marcan "No verificado".
+Basado en Kuniyoshi (2025) y Osorio (2025), PEG de Zamorano. Kuniyoshi encontró una relación positiva pero débil entre la abundancia floral de *Spathodea campanulata* y las abejas muertas (R² = 0.21, no significativa), y señaló como factores **no medidos** la exposición a agroquímicos, la disponibilidad de otras especies en floración, la disponibilidad de agua, el clima y la condición de las flores. Las variables basadas en esos factores son **hipótesis** y se marcan "No verificado".
 
 | Variable | Peso | Puntaje | Estado |
 |---|---|---|---|
@@ -77,5 +77,5 @@ Basado en Kuniyoshi (2026) y Osorio (2025), PEG de Zamorano. Kuniyoshi encontró
 
 ## Fuentes de los vínculos ecológicos
 
-- Kuniyoshi Aguilar, A. S. (2026). *Fenología de Spathodea campanulata en el campus de la Universidad Zamorano y presencia de abejas muertas asociadas a sus flores.* PEG, Zamorano.
+- Kuniyoshi Aguilar, A. S. (2025; publicado en 2026). *Fenología de Spathodea campanulata en el campus de la Universidad Zamorano y presencia de abejas muertas asociadas a sus flores.* PEG, Zamorano.
 - Osorio Banegas, N. E. (2025). *Evaluación de la distribución de Spathodea campanulata en el campus de la Universidad Zamorano.* PEG, Zamorano.
