@@ -2,6 +2,11 @@
 import { CONFIG } from './config.js';
 import { casoEjemplo, declaradosEjemplo } from '../riego/calculo.js';
 
+// Resultado de un caso: cómo le fue a la finca después de sus acciones (memoria de casos).
+// ncAntes/ncDespues: n.º de no conformidades GLOBALG.A.P. antes y después.
+// laminaAntes/laminaDespues: lámina aplicada / lámina requerida (ideal 0.9-1.2, rúbrica de agua v0.2).
+export const resultadoVacio = () => ({ ncAntes: null, ncDespues: null, laminaAntes: null, laminaDespues: null });
+
 export function demoFarm() {
   return {
     nombre: 'Finca demostrativa', depto: 'Francisco Morazán', area: 45, areaProd: 28, altitud: 800, pendiente: 'ondulada',
@@ -26,6 +31,7 @@ export function demoFarm() {
     plagas: [{ nombre: 'Mosca blanca', meses: [1, 2, 3], severidad: 'alta' }],
     gg: 'si', minorAplicables: 60, minorFallas: 1,
     nc: [{ criterio: 'Registro de aplicaciones incompleto', dias: 9 }],
+    acciones: [], resultado: resultadoVacio(),
   };
 }
 
@@ -34,6 +40,7 @@ export function emptyFarm() {
     nombre: '', depto: '', area: 0, areaProd: 0, altitud: 0, pendiente: 'plana', fuenteAgua: '', distAgua: 500, tieneCultivos: false,
     cultivos: [], especies: [], riego: 'ninguno', nAplicado: 0, nObjetivo: 0, fertMeses: [], lluviaMeses: [], plaguicidas: [], sueloDesnudoMeses: [],
     labranza: 'cero', plagas: [], gg: 'no', minorAplicables: 60, minorFallas: 0, nc: [],
+    acciones: [], resultado: resultadoVacio(),
   };
 }
 
@@ -64,6 +71,7 @@ export const S = {
   // Ajustes personalizables (módulos activos y umbrales). Viajan con la finca al exportar.
   ajustes: { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } },
   msg: '',
+  casos: [], // casos guardados por el usuario en este navegador (memoria de casos)
   // Módulo de riego: datos de entrada, de dónde salieron y lo que el archivo traía calculado.
   riego: { datos: casoEjemplo(), fuente: 'ejemplo', archivo: '', origen: {}, declarados: declaradosEjemplo(), faltan: [], omitidas: [] },
   ...blankDrafts(),

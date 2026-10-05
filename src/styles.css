@@ -143,3 +143,13 @@ svg text{font-family:var(--f-body)}
 .alerta{border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
 .alerta.error{border-left-color:var(--crit)} .alerta.advertencia{border-left-color:var(--warn)} .alerta.criterio{border-left-color:var(--muted)} .alerta.ok{border-left-color:var(--good)}
 .alerta a{color:var(--accent)}
+
+/* Memoria de casos */
+.caso h3{margin:0;font-size:15px;line-height:1.3}
+.caso p{margin:0}
+.caso .sim{font-family:var(--f-display);font-weight:700;font-size:20px;color:var(--accent)}
+.badge{display:inline-block;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.badge.ejemplo{background:var(--pollen-soft);color:var(--pollen)}
+.badge.propio{background:var(--accent-soft);color:var(--ink)}
+.caso ul.acc{margin:4px 0 0;padding-left:18px}
+.caso .resultado{border-top:1px solid var(--line);padding-top:8px}

@@ -12,6 +12,7 @@ const CLAVE_LOCAL = 'biogap:v1';
 
 const esMes = (x) => Number.isInteger(x) && x >= 0 && x <= 11;
 const meses = (a) => (Array.isArray(a) ? [...new Set(a.filter(esMes))].sort((x, y) => x - y) : []);
+const numONulo = (x, max = Infinity) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= max ? x : null);
 const num = (x, d = 0) => (typeof x === 'number' && Number.isFinite(x) && x >= 0 ? x : d);
 const txt = (x, d = '') => (typeof x === 'string' ? x.slice(0, 200) : d);
 const opcion = (x, ops, d) => (ops.includes(x) ? x : d);
@@ -45,7 +46,35 @@ export function normalizarFinca(o) {
     gg: opcion(o.gg, ['si', 'quiero', 'no'], v.gg),
     minorAplicables: num(o.minorAplicables, v.minorAplicables), minorFallas: num(o.minorFallas),
     nc: lista(o.nc, (n) => n && { criterio: txt(n.criterio), dias: num(n.dias) }),
+    acciones: lista(o.acciones, (a) => typeof a === 'string' && a.trim() ? txt(a.trim()) : null).slice(0, 30),
+    resultado: normalizarResultado(o.resultado),
   };
+}
+
+// Resultado del caso. Un valor faltante o inválido queda en null (sin dato), nunca en 0.
+export function normalizarResultado(r) {
+  const o = r && typeof r === 'object' ? r : {};
+  return {
+    ncAntes: numONulo(o.ncAntes, 10000), ncDespues: numONulo(o.ncDespues, 10000),
+    laminaAntes: numONulo(o.laminaAntes, 10), laminaDespues: numONulo(o.laminaDespues, 10),
+  };
+}
+
+// Casos que el usuario guardó en este navegador (la memoria local de la Etapa 1;
+// la Etapa 2 los llevará a una base de datos con consentimiento y anonimización).
+const CLAVE_CASOS = 'biogap:casos:v1';
+export function normalizarCaso(c) {
+  if (!c || typeof c !== 'object' || typeof c.id !== 'string') return null;
+  return {
+    id: c.id.slice(0, 80), origen: opcion(c.origen, ['ejemplo', 'propio'], 'propio'),
+    etiqueta: txt(c.etiqueta) || 'Caso sin nombre', guardado: txt(c.guardado), finca: normalizarFinca(c.finca),
+  };
+}
+export function cargarCasos() {
+  try { const o = JSON.parse(localStorage.getItem(CLAVE_CASOS) || '[]'); return Array.isArray(o) ? o.slice(0, 500).map(normalizarCaso).filter(Boolean) : []; } catch { return []; }
+}
+export function guardarCasos(casos) {
+  try { localStorage.setItem(CLAVE_CASOS, JSON.stringify(casos)); return true; } catch { return false; }
 }
 
 // Solo la parte personalizable de la configuración viaja con la finca.
