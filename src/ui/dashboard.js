@@ -7,10 +7,29 @@ import { evaluar, simular, nivel } from '../core/engine.js';
 import { configEfectiva, normalizarAjustes } from '../core/storage.js';
 import { gauge, radar, pressureChart, calRow, dlt } from './charts.js';
 import { panelVecinosDashboard } from './casos.js';
+import { conPlan } from '../fert/calculo.js';
+import { ESTADOS } from '../core/rubrica.js';
+import { calcular } from '../riego/calculo.js';
+import { validar } from '../riego/reglas.js';
+
+// Hallazgos del módulo Riego, solo si el usuario cargó o escribió sus propios datos (no el caso de ejemplo).
+export function extraRiego(){
+  if(S.riego.fuente==='ejemplo')return {};
+  try{return {riego:validar(calcular(S.riego.datos),S.riego.declarados||{})};}catch{return {};}
+}
+
+// Tabla de la rúbrica de un módulo: qué variable, con qué valor, qué puntaje, cuánto pesa y de dónde sale.
+function tablaRubrica(m){
+  const pt=v=>v.puntaje==null?'<span class="muted">sin dato</span>':`<span class="pill ${v.puntaje>=67?'Alto':v.puntaje>=34?'Medio':'Bajo'}">${v.puntaje}</span>`;
+  return `<div class="scroll"><table class="data rubrica"><thead><tr><th>Variable</th><th>Valor</th><th class="num">Puntaje</th><th class="num">Peso</th></tr></thead><tbody>
+    ${m.variables.filter(v=>v.aplica!==false).map(v=>`<tr><td>${esc(v.nombre)}<div class="estado ${v.estado.replace(' ','-')}" title="${esc(v.fuente)}">${ESTADOS[v.estado]}${v.fuente?' ⓘ':''}</div></td><td>${esc(v.valor)}</td><td class="num">${pt(v)}</td><td class="num">${v.peso}</td></tr>`).join('')}
+  </tbody></table></div>
+  <p class="muted small">Riesgo = Σ peso × puntaje ÷ Σ peso, solo con las variables que tienen dato. Pesos y cortes: criterio propio, por validar.</p>`;
+}
 
 export function viewDashboard(){
   const cfg=configEfectiva(normalizarAjustes(S.ajustes));
-  const f=S.farm,R=evaluar(f,cfg),mods=R.mods;
+  const f=conPlan(S.farm),X=extraRiego(),R=evaluar(f,cfg,X),mods=R.mods;
   if(!mods.length)return `<section class="panel"><h2>No hay módulos activos</h2><p class="muted">Activa al menos uno en Ajustes.</p></section>`;
   const top=[...mods].sort((a,b)=>b.score-a.score)[0];
   const hotM=R.mh.map((a,i)=>[i,a.length]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
@@ -18,7 +37,7 @@ export function viewDashboard(){
   const doneN=recs.filter(x=>S.done[x.k]).length;
   const gg=f.gg!=='no';
   const allowed=Math.floor(Math.max(0,f.minorAplicables)*CONFIG.globalgap.margenMinorMusts);const remaining=allowed-f.minorFallas;
-  const anySim=Object.values(S.sim).some(Boolean);const RS=anySim?simular(f,S.sim,cfg):R;
+  const anySim=Object.values(S.sim).some(Boolean);const RS=anySim?simular(f,S.sim,cfg,X):R;
   const lvO=nivel(R.overall,cfg);
   const pesoTotal=mods.reduce((s,m)=>s+(cfg.pesos[m.id]??0),0);
   const pesosTxt=mods.map(m=>`${m.nombre.toLowerCase()} ${Math.round((cfg.pesos[m.id]??0)/pesoTotal*100)} %`).join(', ');
@@ -46,7 +65,7 @@ export function viewDashboard(){
       </div>
       <div><p class="label" style="text-align:center">Índice ambiental global</p>${gauge(R.overall,lvO)}</div>
     </div>
-    <p class="muted small">El índice promedia los módulos activos con pesos ilustrativos, por calibrar: ${pesosTxt}.</p>
+    <p class="muted small">El índice promedia los módulos activos; cada módulo es una rúbrica de variables con peso y fuente. Pesos por calibrar: ${pesosTxt}.</p>
   </section>
   <div class="grid2">
     <section class="panel"><div><h2>Perfil de riesgo ambiental</h2><p class="muted">Índice de 0 a 100 por módulo. Más lejos del centro, más riesgo.</p></div>${radar(mods)}</section>
@@ -57,7 +76,7 @@ export function viewDashboard(){
         <div class="bar-track" aria-hidden="true"><span class="fill-${m.level}" style="width:${m.score}%"></span></div>
         <p class="muted small">Causa principal: ${m.driver}</p>
         <div><div class="row between small muted"><span>Confianza de datos</span><span>${Math.round(m.conf*100)} %</span></div><div class="conf"><span style="width:${m.conf*100}%"></span></div></div>
-        <details><summary>Ver fórmula</summary><div class="formula">Riesgo = 100 × P × E × V\n${m.formula}\nFórmula ilustrativa: pesos por calibrar.</div></details>
+        <details><summary>Ver rúbrica (${m.variables.filter(v=>v.aplica!==false).length} variables)</summary>${tablaRubrica(m)}</details>
       </article>`).join('')}
     </div></section>
   </div>

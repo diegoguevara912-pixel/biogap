@@ -1,33 +1,81 @@
 # Fórmulas del motor de riesgo
 
-**Riesgo del módulo = 100 × P × E × V.** P, E y V van de 0 a 1.
+**Rúbrica aditiva.** Cada módulo es una lista de variables. Cada variable recibe un puntaje de **0, 50 o 100** y tiene un **peso** (suman 100 por módulo).
 
-- **P (presión):** cuánto empuja la práctica hacia el daño.
-- **E (exposición):** cuánto coincide esa presión, en tiempo o espacio, con lo vulnerable.
-- **V (vulnerabilidad):** qué tan sensible es lo que se puede dañar.
+**Riesgo del módulo = Σ peso × puntaje ÷ Σ peso**, solo con las variables que tienen dato.
 
-Niveles: **Alto** ≥ 67 · **Medio** ≥ 34 · **Bajo** < 34. Se ajustan en `src/core/config.js`.
+**Confianza de datos = peso con dato ÷ peso total.** Un dato faltante baja la confianza; no cuenta como riesgo cero. Una variable que **no aplica** a la finca (p. ej. fertirriego si no se usa) no cuenta para nada.
 
-**Confianza de datos:** la proporción de entradas clave que el usuario llenó. No indica que la fórmula sea correcta. Solo indica que se calculó con datos completos.
+Niveles: **Alto** ≥ 67 · **Medio** ≥ 34 · **Bajo** < 34. Pesos, cortes y niveles se ajustan en `src/core/config.js`.
 
-> Todo lo de esta página es **ilustrativo**. Ningún peso está calibrado con mediciones. La columna "Estado" sirve para registrar el avance de la calibración.
+Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor ≥ a → 0; ≥ b → 50; menor → 100.
 
-| Módulo | P | E | V | Estado |
-|---|---|---|---|---|
-| Polinizadores | 0.5·[hay especie de riesgo] + 0.5·[hay aplicaciones no biológicas] | (meses floración–aplicación + 0.5·meses de floración de riesgo) / 6 | 1 si hay abejas nativas registradas; 0.7 si no | Por calibrar |
-| Fertilización | (N aplicado / N objetivo) − 0.5 | pendiente × (0.5 + 0.5·meses fertilizados con lluvia / meses fertilizados) | distancia al agua: < 30 m → 1; < 100 m → 0.7; resto → 0.4 | Por calibrar |
-| Agua | riego: gravedad 0.9; aspersión 0.6; goteo 0.3; ninguno 0.1 | área productiva / área total | distancia al agua (igual que arriba) | Por calibrar |
-| Suelo | labranza: convencional 0.9; mínima 0.5; cero 0.2 | pendiente: plana 0.3; ondulada 0.6; fuerte 1 | 0.4 + 0.6·meses de suelo desnudo con lluvia / meses de lluvia | Por calibrar |
-| Cadenas tróficas | aplicaciones de amplio espectro / total | meses de amplio espectro que coinciden con plagas / meses de amplio espectro | 1 − 0.6·proporción de especies nativas | Por calibrar |
+> Pesos y cortes son **criterio propio** salvo que se indique fuente. Están por validar con especialistas y por calibrar con casos reales (Etapa 3).
 
-## Limitaciones conocidas
+## Polinizadores
 
-- La forma multiplicativa hace que un solo factor en 0 anule el riesgo completo. Esto es intencional (sin exposición no hay riesgo), pero hay que revisarlo módulo por módulo.
-- Polinizadores divide entre 6 meses. Es un tope arbitrario.
-- Los factores binarios (sí/no) no distinguen intensidad. Por ejemplo, un árbol de riesgo cuenta igual que cien.
+Basado en Kuniyoshi (2025) y Osorio (2025), PEG de Zamorano. Kuniyoshi encontró una relación positiva pero débil entre la abundancia floral de *Spathodea campanulata* y las abejas muertas (R² = 0.21, no significativa), y señaló como factores **no medidos** la exposición a agroquímicos, la disponibilidad de otras especies en floración, la disponibilidad de agua, el clima y la condición de las flores. Las variables basadas en esos factores son **hipótesis** y se marcan "No verificado".
 
-## Cómo calibrar (cuando haya datos)
+| Variable | Peso | Puntaje | Estado |
+|---|---|---|---|
+| Meses con aplicación no biológica en floración visitada | 25 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 | Criterio propio |
+| Producto más agresivo aplicado en floración | 15 | ninguno/biológico 0 · selectivo 50 · amplio 100 | Criterio propio |
+| Meses de floración de especies de riesgo | 10 | ≤ 0 → 0 · ≤ 2 → 50 · mayor → 100 | Criterio propio |
+| Abundancia de la especie de riesgo: volumen de copa V = 4/3·π·(D/2)²·(H/2) (Osorio, Ec. 3); sin medidas, n.º de árboles | 15 | m³: ≤ 0 → 0 · ≤ 1 000 → 50 · mayor → 100 (árboles: 0 / 1 / más) | Verificado (relación débil); corte criterio propio |
+| Meses de floración de riesgo sin otra floración segura (fracción) | 15 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 | No verificado (hipótesis) |
+| Meses de floración de riesgo sin lluvia (fracción) | 10 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 | No verificado (hipótesis) |
+| **Vínculo con Fertilización:** aplicación foliar en floración visitada (solo con plan) | 5 | ninguna 0 · alguna 100 | No verificado (hipótesis) |
+| Abejas nativas registradas (receptor) | 5 | nativas 100 · solo no nativas 50 · sin fauna: sin dato | Criterio propio |
 
-1. Estandarizar los datos de las tesis en tablas con las mismas variables del cuestionario.
-2. Comparar el puntaje de la app con el daño observado en cada caso.
-3. Ajustar los valores en `config.js` y registrar aquí la fuente de cada cambio.
+## Fertilización
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| N aplicado / N objetivo | 30 | ≤ 1 → 0 · ≤ 1.2 → 50 · mayor → 100 |
+| Fracción del N (con plan) o de las fertilizaciones en meses de lluvia fuerte | 20 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Mayor fracción del N aplicada en un solo mes (requiere plan) | 10 | ≤ 0.5 → 0 · ≤ 0.75 → 50 · mayor → 100 |
+| Fracción del N como urea al voleo sin incorporar (requiere plan) | 10 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| P₂O₅ aplicado / P₂O₅ objetivo (requiere plan) | 10 | ≤ 1 → 0 · ≤ 1.2 → 50 · mayor → 100 |
+| Pendiente | 10 | plana 0 · ondulada 50 · fuerte 100 |
+| Distancia al cuerpo de agua (m) | 10 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
+
+## Agua
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Sistema de riego (eficiencia FAO 90/75/60 %) | 25 | goteo 0 · aspersión 50 · gravedad 100 · sin riego 0 |
+| Distancia al cuerpo de agua (m) | 20 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
+| Área productiva / área total | 15 | ≤ 0.5 → 0 · ≤ 0.8 → 50 · mayor → 100 |
+| Hallazgos del módulo Riego (FAO-56) | 30 | sin hallazgos 0 · advertencias 50 · error 100 · sin cargar: sin dato |
+| **Vínculo con Fertilización:** fertirriego con un diseño de riego que escurre (solo si hay fertirriego) | 10 | no escurre 0 · escurre 100 |
+
+## Suelo
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Meses de suelo desnudo con lluvia | 35 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 |
+| Labranza | 25 | cero 0 · mínima 50 · convencional 100 |
+| Pendiente | 25 | plana 0 · ondulada 50 · fuerte 100 |
+| **Vínculo con Fertilización:** fracción de N + P₂O₅ aplicada sobre suelo desnudo en meses de lluvia (solo con plan) | 15 | ≤ 0 → 0 · ≤ 0.25 → 50 · mayor → 100 |
+
+## Cadenas tróficas
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Fracción de productos de amplio espectro | 35 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Fracción de meses de amplio espectro con plaga | 25 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Fracción de especies silvestres nativas | 25 | ≥ 0.6 → 0 · ≥ 0.3 → 50 · menor → 100 |
+| Meses con aplicación en cosecha | 15 | ≤ 0 → 0 · ≤ 0 → 50 · mayor → 100 |
+
+## Plan de fertilización (pestaña Fertilización)
+
+- Se escribe a mano o se carga una plantilla Excel/CSV (columnas Mes, Producto, Dosis, Unidad, Método).
+- Nutriente aplicado (kg/ha) = dosis de producto (kg/ha) × grado (%) ÷ 100. El grado N-P₂O₅-K₂O viene en la etiqueta. Conversión de grado a producto verificada contra UT Extension, Fertilizer Cost Calculator v1.0 (University of Tennessee).
+- Unidades: 1 quintal = 100 lb = 45.359237 kg; 1 manzana = 10 000 varas² = 0.69873 ha; 1 qq/mz ≈ 64.9 kg/ha; 1 lb/acre ≈ 1.121 kg/ha.
+- Los objetivos por nutriente los pone el usuario (análisis de suelo o agrónomo); la app no recomienda dosis.
+- Objetivo de sostenibilidad: el plan alimenta Fertilización y, por sus efectos en el ecosistema, Suelo y Agua. Con Polinizadores se vincula por las aplicaciones foliares en floración visitada.
+
+## Fuentes de los vínculos ecológicos
+
+- Kuniyoshi Aguilar, A. S. (2025; publicado en 2026). *Fenología de Spathodea campanulata en el campus de la Universidad Zamorano y presencia de abejas muertas asociadas a sus flores.* PEG, Zamorano.
+- Osorio Banegas, N. E. (2025). *Evaluación de la distribución de Spathodea campanulata en el campus de la Universidad Zamorano.* PEG, Zamorano.

@@ -35,9 +35,16 @@ export function normalizarFinca(o) {
       tipo: opcion(e.tipo, ['Árbol', 'Arbusto', 'Maleza', 'Cultivo', 'Fauna'], 'Árbol'),
       origen: opcion(e.origen, ['nativa', 'exótica', 'desconocido'], 'desconocido'),
       floracion: meses(e.floracion), atrae: bool(e.atrae), riesgo: bool(e.riesgo),
+      // Opcionales: número de individuos y medidas de copa en m (para el volumen de copa, Osorio 2025).
+      ...Object.fromEntries([['cantidad', numONulo(e.cantidad, 1e6)], ['copaD', numONulo(e.copaD, 100)], ['copaH', numONulo(e.copaH, 100)]].filter(([, v]) => v != null)),
     }),
     riego: opcion(o.riego, ['gravedad', 'aspersion', 'goteo', 'ninguno'], v.riego),
-    nAplicado: num(o.nAplicado), nObjetivo: num(o.nObjetivo),
+    nAplicado: num(o.nAplicado), nObjetivo: num(o.nObjetivo), pObjetivo: num(o.pObjetivo), kObjetivo: num(o.kObjetivo),
+    fertPlan: lista(o.fertPlan, (a) => a && esMes(a.mes) && num(a.dosis) > 0 && {
+      mes: a.mes, producto: txt(a.producto, 'otro').slice(0, 40), dosis: Math.min(num(a.dosis), 5000),
+      n: Math.min(num(a.n), 100), p: Math.min(num(a.p), 100), k: Math.min(num(a.k), 100),
+      metodo: opcion(a.metodo, ['incorporado', 'voleo', 'fertirriego', 'foliar'], 'voleo'),
+    }).slice(0, 60),
     fertMeses: meses(o.fertMeses), lluviaMeses: meses(o.lluviaMeses),
     plaguicidas: lista(o.plaguicidas, (p) => p && { producto: txt(p.producto), clase: opcion(p.clase, ['amplio', 'selectivo', 'biologico'], 'amplio'), meses: meses(p.meses) }),
     sueloDesnudoMeses: meses(o.sueloDesnudoMeses),
