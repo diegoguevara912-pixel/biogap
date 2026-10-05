@@ -45,7 +45,8 @@ src/
 ├─ styles.css           tema claro/oscuro y componentes
 ├─ core/
 │  ├─ config.js         ← PERSONALIZACIÓN: módulos activos, umbrales y factores
-│  ├─ engine.js         motor: Riesgo = 100 × P × E × V
+│  ├─ rubrica.js        puntaje 0/50/100 por cortes y promedio ponderado
+│  ├─ engine.js         motor: rúbrica aditiva por módulo
 │  ├─ state.js          finca de ejemplo, finca vacía y plantillas
 │  ├─ storage.js        exportar/importar JSON con validación y autoguardado
 │  └─ utils.js

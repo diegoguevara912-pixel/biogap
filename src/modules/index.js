@@ -1,6 +1,6 @@
 // Registro de módulos. Para agregar uno nuevo: crea el archivo con
 // { id, nombre, ifa, evaluar(f, ctx, helpers) } que devuelva
-// { P, E, V, req, recs, driver, formula }, impórtalo aquí y agrega su id
+// { variables, recs } (ver src/core/rubrica.js; pesos y cortes en CONFIG.rubrica), impórtalo aquí y agrega su id
 // a CONFIG.modulosActivos.
 import polinizadores from './polinizadores.js';
 import fertilizacion from './fertilizacion.js';

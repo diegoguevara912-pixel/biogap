@@ -1,25 +1,28 @@
 // Módulo: Fertilización (nitrógeno y escorrentía).
-import { clamp, inter } from '../core/utils.js';
+import { inter } from '../core/utils.js';
+import { variable, porCortes } from '../core/rubrica.js';
 
 export default {
   id: 'fert',
   nombre: 'Fertilización',
   ifa: '29 Fertilizantes',
-  evaluar(f, ctx, { cfg, factorDistancia }) {
-    const ratio = f.nObjetivo > 0 ? f.nAplicado / f.nObjetivo : f.nAplicado > 0 ? 1.5 : 0;
-    const P = clamp(ratio - 0.5);
+  evaluar(f, ctx, { cfg }) {
+    const R = cfg.rubrica.fert;
+    const ratio = f.nObjetivo > 0 ? f.nAplicado / f.nObjetivo : null;
     const ovr = inter(f.fertMeses, f.lluviaMeses).length;
-    const E = clamp(cfg.pendiente[f.pendiente] * (0.5 + (0.5 * ovr) / Math.max(1, f.fertMeses.length)));
-    const V = factorDistancia(f.distAgua);
-    const req = [f.nAplicado > 0, f.nObjetivo > 0, f.fertMeses.length > 0, f.lluviaMeses.length > 0];
+    const fracLluvia = f.fertMeses.length && f.lluviaMeses.length ? ovr / f.fertMeses.length : null;
+    const variables = [
+      variable('dosis', 'Dosis de N frente al objetivo', R.dosis.peso, porCortes(ratio, R.dosis),
+        ratio == null ? (f.nAplicado > 0 ? 'Sin objetivo definido' : 'Sin dato') : `${f.nAplicado} de ${f.nObjetivo} kg N/ha (${Math.round(ratio * 100)} %)`),
+      variable('lluvia', 'Fertilización en meses de lluvia fuerte', R.lluvia.peso, porCortes(fracLluvia, R.lluvia),
+        fracLluvia == null ? 'Sin dato' : `${ovr} de ${f.fertMeses.length} mes(es)`),
+      variable('pendiente', 'Pendiente (arrastre por escorrentía)', R.pendiente.peso, cfg.categorias.pendiente[f.pendiente], f.pendiente),
+      variable('distancia', 'Distancia al cuerpo de agua', R.distancia.peso, porCortes(f.distAgua, R.distancia), `${f.distAgua} m`),
+    ];
     const recs = [];
     if (ratio > 1) recs.push(`La dosis supera el objetivo de la finca en ${Math.round((ratio - 1) * 100)} %. Ajustar hacia ${f.nObjetivo} kg N/ha.`);
     if (ovr) recs.push('Evitar fertilizar en meses de lluvia fuerte para reducir la escorrentía.');
     if (f.nAplicado > 0 && !f.nObjetivo) recs.push('Definir un objetivo de nitrógeno con tu agrónomo para poder comparar la dosis.');
-    return {
-      P, E, V, req, recs,
-      driver: ratio > 1 ? 'Dosis sobre el objetivo' : ovr ? 'Fertilización en lluvias' : 'Sin causa dominante',
-      formula: `P = (N aplicado / N objetivo) − 0.5 = ${P.toFixed(2)}\nE = pendiente × (0.5 + 0.5·meses con lluvia / meses de fertilización) = ${E.toFixed(2)}\nV = distancia al agua (<30 m: 1; <100 m: 0.7; resto 0.4) = ${V.toFixed(2)}`,
-    };
+    return { variables, recs };
   },
 };

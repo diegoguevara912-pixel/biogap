@@ -1,17 +1,17 @@
-// Motor de riesgo: Riesgo = 100 × P × E × V por módulo.
-// P = presión de la práctica, E = exposición, V = vulnerabilidad del receptor.
-// Cada módulo vive en src/modules/ y solo recibe la finca y un contexto común.
+// Motor de riesgo: rúbrica aditiva por módulo.
+// Cada módulo (src/modules/) describe sus variables con peso, puntaje 0/50/100, valor y fuente.
+// Riesgo del módulo = Σ peso·puntaje / Σ peso (con dato). Índice global = promedio ponderado de módulos.
 
 import { CONFIG } from './config.js';
 import { uniq, inter } from './utils.js';
 import { MODULOS } from '../modules/index.js';
+import { puntuar } from './rubrica.js';
 
 export const nivel = (v, cfg = CONFIG) => (v >= cfg.niveles.alto ? 'Alto' : v >= cfg.niveles.medio ? 'Medio' : 'Bajo');
 
-export const factorDistancia = (d, cfg = CONFIG) => cfg.distanciaAgua.find((t) => d < t.menorQue).factor;
-
 // Calendarios derivados que comparten varios módulos.
-export function contexto(f) {
+// extra.riego: alertas del módulo Riego (validar()), si el usuario cargó sus propios datos de riego.
+export function contexto(f, extra = {}) {
   const atraeFlor = uniq(f.especies.filter((e) => e.atrae).flatMap((e) => e.floracion));
   const riesgoFlor = uniq(f.especies.filter((e) => e.riesgo).flatMap((e) => e.floracion));
   const aplic = uniq(f.plaguicidas.filter((p) => p.clase !== 'biologico').flatMap((p) => p.meses));
@@ -21,22 +21,19 @@ export function contexto(f) {
   const cosechaM = uniq(f.cultivos.flatMap((c) => c.cosecha));
   const siembraM = uniq(f.cultivos.flatMap((c) => c.siembra));
   const ov1 = inter(atraeFlor, aplic);
-  return { atraeFlor, riesgoFlor, aplic, amplio, plagaM, cosechaM, siembraM, nativasFauna, ov1 };
+  return { atraeFlor, riesgoFlor, aplic, amplio, plagaM, cosechaM, siembraM, nativasFauna, ov1, riego: extra.riego ?? null };
 }
 
-export function evaluar(f, cfg = CONFIG) {
-  const ctx = contexto(f);
-  const helpers = { cfg, factorDistancia: (d) => factorDistancia(d, cfg) };
+export function evaluar(f, cfg = CONFIG, extra = {}) {
+  const ctx = contexto(f, extra);
+  const helpers = { cfg };
   const mods = cfg.modulosActivos
     .map((id) => MODULOS.find((m) => m.id === id))
     .filter(Boolean)
     .map((mod) => {
       const r = mod.evaluar(f, ctx, helpers);
-      const score = Math.round(100 * r.P * r.E * r.V);
-      return {
-        id: mod.id, nombre: mod.nombre, ifa: mod.ifa, ...r,
-        score, level: nivel(score, cfg), conf: r.req.filter(Boolean).length / r.req.length,
-      };
+      const p = puntuar(r.variables);
+      return { id: mod.id, nombre: mod.nombre, ifa: mod.ifa, ...r, ...p, level: nivel(p.score, cfg) };
     });
   // Índice global: promedio ponderado de los módulos activos (pesos renormalizados).
   const pesoTotal = mods.reduce((s, m) => s + (cfg.pesos?.[m.id] ?? 0), 0);
@@ -55,7 +52,7 @@ export function evaluar(f, cfg = CONFIG) {
 }
 
 // Simulador: aplica cambios hipotéticos a una copia de la finca y recalcula. No toca los datos reales.
-export function simular(f, sim, cfg = CONFIG) {
+export function simular(f, sim, cfg = CONFIG, extra = {}) {
   const g = structuredClone(f);
   const base = contexto(f);
   if (sim.n && g.nObjetivo > 0) g.nAplicado = Math.min(g.nAplicado, g.nObjetivo);
@@ -63,5 +60,5 @@ export function simular(f, sim, cfg = CONFIG) {
   if (sim.riego && (g.riego === 'gravedad' || g.riego === 'aspersion')) g.riego = 'goteo';
   if (sim.suelo) { g.sueloDesnudoMeses = []; if (g.labranza === 'convencional') g.labranza = 'minima'; }
   if (sim.selec) g.plaguicidas.forEach((p) => { if (p.clase === 'amplio') p.clase = 'selectivo'; });
-  return evaluar(g, cfg);
+  return evaluar(g, cfg, extra);
 }

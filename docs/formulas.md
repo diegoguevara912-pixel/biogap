@@ -1,33 +1,58 @@
 # Fórmulas del motor de riesgo
 
-**Riesgo del módulo = 100 × P × E × V.** P, E y V van de 0 a 1.
+**Rúbrica aditiva.** Cada módulo es una lista de variables. Cada variable recibe un puntaje de **0, 50 o 100** y tiene un **peso** (suman 100 por módulo).
 
-- **P (presión):** cuánto empuja la práctica hacia el daño.
-- **E (exposición):** cuánto coincide esa presión, en tiempo o espacio, con lo vulnerable.
-- **V (vulnerabilidad):** qué tan sensible es lo que se puede dañar.
+**Riesgo del módulo = Σ peso × puntaje ÷ Σ peso**, solo con las variables que tienen dato.
 
-Niveles: **Alto** ≥ 67 · **Medio** ≥ 34 · **Bajo** < 34. Se ajustan en `src/core/config.js`.
+**Confianza de datos = peso con dato ÷ peso total.** Un dato faltante baja la confianza; no cuenta como riesgo cero.
 
-**Confianza de datos:** la proporción de entradas clave que el usuario llenó. No indica que la fórmula sea correcta. Solo indica que se calculó con datos completos.
+Niveles: **Alto** ≥ 67 · **Medio** ≥ 34 · **Bajo** < 34. Pesos, cortes y niveles se ajustan en `src/core/config.js`.
 
-> Todo lo de esta página es **ilustrativo**. Ningún peso está calibrado con mediciones. La columna "Estado" sirve para registrar el avance de la calibración.
+Cortes [a, b]: valor ≤ a → 0; ≤ b → 50; mayor → 100. Inverso: valor ≥ a → 0; ≥ b → 50; menor → 100.
 
-| Módulo | P | E | V | Estado |
-|---|---|---|---|---|
-| Polinizadores | 0.5·[hay especie de riesgo] + 0.5·[hay aplicaciones no biológicas] | (meses floración–aplicación + 0.5·meses de floración de riesgo) / 6 | 1 si hay abejas nativas registradas; 0.7 si no | Por calibrar |
-| Fertilización | (N aplicado / N objetivo) − 0.5 | pendiente × (0.5 + 0.5·meses fertilizados con lluvia / meses fertilizados) | distancia al agua: < 30 m → 1; < 100 m → 0.7; resto → 0.4 | Por calibrar |
-| Agua | riego: gravedad 0.9; aspersión 0.6; goteo 0.3; ninguno 0.1 | área productiva / área total | distancia al agua (igual que arriba) | Por calibrar |
-| Suelo | labranza: convencional 0.9; mínima 0.5; cero 0.2 | pendiente: plana 0.3; ondulada 0.6; fuerte 1 | 0.4 + 0.6·meses de suelo desnudo con lluvia / meses de lluvia | Por calibrar |
-| Cadenas tróficas | aplicaciones de amplio espectro / total | meses de amplio espectro que coinciden con plagas / meses de amplio espectro | 1 − 0.6·proporción de especies nativas | Por calibrar |
+> Pesos y cortes son **criterio propio** salvo que se indique fuente. Están por validar con especialistas y por calibrar con casos reales (Etapa 3).
 
-## Limitaciones conocidas
+## Polinizadores
 
-- La forma multiplicativa hace que un solo factor en 0 anule el riesgo completo. Esto es intencional (sin exposición no hay riesgo), pero hay que revisarlo módulo por módulo.
-- Polinizadores divide entre 6 meses. Es un tope arbitrario.
-- Los factores binarios (sí/no) no distinguen intensidad. Por ejemplo, un árbol de riesgo cuenta igual que cien.
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Meses con aplicación no biológica en floración visitada | 35 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 |
+| Producto más agresivo aplicado en floración | 25 | ninguno/biológico 0 · selectivo 50 · amplio 100 |
+| Meses de floración de especies de riesgo | 25 | ≤ 0 → 0 · ≤ 2 → 50 · mayor → 100 |
+| Abejas nativas registradas (receptor) | 15 | nativas 100 · solo no nativas 50 · sin fauna: sin dato |
 
-## Cómo calibrar (cuando haya datos)
+## Fertilización
 
-1. Estandarizar los datos de las tesis en tablas con las mismas variables del cuestionario.
-2. Comparar el puntaje de la app con el daño observado en cada caso.
-3. Ajustar los valores en `config.js` y registrar aquí la fuente de cada cambio.
+| Variable | Peso | Puntaje |
+|---|---|---|
+| N aplicado / N objetivo | 35 | ≤ 1 → 0 · ≤ 1.2 → 50 · mayor → 100 |
+| Fracción de fertilizaciones en meses de lluvia fuerte | 25 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Pendiente | 20 | plana 0 · ondulada 50 · fuerte 100 |
+| Distancia al cuerpo de agua (m) | 20 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
+
+## Agua
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Sistema de riego (eficiencia FAO 90/75/60 %) | 25 | goteo 0 · aspersión 50 · gravedad 100 · sin riego 0 |
+| Distancia al cuerpo de agua (m) | 25 | ≥ 100 → 0 · ≥ 30 → 50 · menor → 100 |
+| Área productiva / área total | 15 | ≤ 0.5 → 0 · ≤ 0.8 → 50 · mayor → 100 |
+| Hallazgos del módulo Riego (FAO-56) | 35 | sin hallazgos 0 · advertencias 50 · error 100 · sin cargar: sin dato |
+
+## Suelo
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Meses de suelo desnudo con lluvia | 40 | ≤ 0 → 0 · ≤ 1 → 50 · mayor → 100 |
+| Labranza | 30 | cero 0 · mínima 50 · convencional 100 |
+| Pendiente | 30 | plana 0 · ondulada 50 · fuerte 100 |
+
+## Cadenas tróficas
+
+| Variable | Peso | Puntaje |
+|---|---|---|
+| Fracción de productos de amplio espectro | 35 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Fracción de meses de amplio espectro con plaga | 25 | ≤ 0 → 0 · ≤ 0.5 → 50 · mayor → 100 |
+| Fracción de especies silvestres nativas | 25 | ≥ 0.6 → 0 · ≥ 0.3 → 50 · menor → 100 |
+| Meses con aplicación en cosecha | 15 | ≤ 0 → 0 · ≤ 0 → 50 · mayor → 100 |
+
