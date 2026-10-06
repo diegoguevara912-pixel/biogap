@@ -82,4 +82,13 @@ export const CONFIG = {
     umbralParecido: 0.1, // distancia de un rasgo hasta la que se considera "parecido"
     coberturaMinima: 0.5, // fracción del peso que debe poder compararse
   },
+
+  // Nube (Etapa 2 de la memoria de casos): proyecto Supabase "biogap".
+  // La clave publicable es pública por diseño; el acceso lo limita la seguridad por filas (RLS) de la base.
+  // NUNCA pongas aquí la clave service_role. Con url o clave vacías, la app funciona solo en local.
+  nube: {
+    url: 'https://kfybqlknlkxrqphwopfx.supabase.co',
+    clavePublicable: 'sb_publishable_GZY64ytTNLaL9898VrIGKA_P0ZdFOXb',
+    maxCasos: 500, // casos de la comunidad que se descargan
+  },
 };
