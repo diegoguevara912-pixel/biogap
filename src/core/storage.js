@@ -68,7 +68,7 @@ export function normalizarResultado(r) {
 }
 
 // Casos que el usuario guardó en este navegador (la memoria local de la Etapa 1;
-// la Etapa 2 los llevará a una base de datos con consentimiento y anonimización).
+// la Etapa 2 suma la nube, ver src/nube/ y src/casos/anonimo.js; esta memoria local sigue igual).
 const CLAVE_CASOS = 'biogap:casos:v1';
 export function normalizarCaso(c) {
   if (!c || typeof c !== 'object' || typeof c.id !== 'string') return null;
