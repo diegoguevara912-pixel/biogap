@@ -73,6 +73,23 @@ export const CONFIG = {
   // Reglas GLOBALG.A.P. IFA v6 usadas por el panel de certificación.
   globalgap: { margenMinorMusts: 0.05, diasCierreNC: 28 },
 
+  // Mapa satelital de la finca (Issue #10). Las coordenadas se guardan solo en este navegador.
+  mapa: {
+    // Capa: EOxCloudless 2024 (Sentinel-2, ~10 m por píxel). Licencia CC BY-NC-SA 4.0 para uso
+    // no comercial (proyectos universitarios); uso comercial requiere licencia de EOX.
+    // Fuente: https://cloudless.eox.at/documentation/license
+    capa: {
+      url: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg',
+      atribucion: 'EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2024)',
+      enlace: 'https://cloudless.eox.at',
+    },
+    zoomMin: 3, zoomMax: 16, // con ~10 m por píxel, más allá de 16 solo se ve borroso
+    inicio: { lat: 14.75, lon: -86.6, zoom: 7 }, // vista general de Honduras
+    // Rectángulo aproximado de Honduras continental e islas (criterio propio, solo para avisar).
+    honduras: { latMin: 12.9, latMax: 17.5, lonMin: -89.4, lonMax: -83.1 },
+    toleranciaArea: 0.2, // aviso si el área dibujada difiere más de 20 % de la declarada (criterio propio)
+  },
+
   // Memoria de casos (k-NN). Criterio propio, por calibrar con casos reales (Etapa 3).
   casos: {
     k: 3, // fincas parecidas que se muestran

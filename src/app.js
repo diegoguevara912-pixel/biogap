@@ -9,6 +9,7 @@ import { viewSettings } from './ui/settings.js';
 import { viewRiego } from './ui/riego.js';
 import { viewCasos } from './ui/casos.js';
 import { viewFertilizacion } from './ui/fertilizacion.js';
+import { montarMapa, reiniciarMapa } from './ui/mapa.js';
 import { producto, UNIDADES } from './fert/catalogo.js';
 import { extraerFert, PLANTILLA_CSV } from './fert/extraer.js';
 import { nombreCultivoPrincipal } from './casos/perfil.js';
@@ -49,7 +50,7 @@ function render(){
   app.innerHTML=(views[S.view]||viewDashboard)();
   S.msg='';
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===S.view?'page':'false'));
-  applyTheme();guardarLocal(S);
+  montarMapa();applyTheme();guardarLocal(S);
   if(id){const el=document.getElementById(id);if(el&&el.tagName!=='BUTTON'){el.focus({preventScroll:true});try{if(ss!=null)el.setSelectionRange(ss,ss);}catch(e){}}}
 }
 const DRAFTS={cultivos:'draftCult',especies:'draftEsp',plaguicidas:'draftPlag',plagas:'draftPlaga'};
@@ -64,8 +65,8 @@ document.addEventListener('click',e=>{
   else if(act==='next'){S.step=Math.min(STEPS.length-1,S.step+1);}
   else if(act==='prev'){S.step=Math.max(0,S.step-1);}
   else if(act==='finish'){S.view='dashboard';}
-  else if(act==='start-empty'){S.farm=emptyFarm();S.demo=false;S.done={};S.view='wizard';S.step=0;}
-  else if(act==='load-demo'){S.farm=demoFarm();S.demo=true;S.done={};S.view='dashboard';S.msg='Se cargó la finca de ejemplo.';}
+  else if(act==='start-empty'){reiniciarMapa();S.farm=emptyFarm();S.demo=false;S.done={};S.view='wizard';S.step=0;}
+  else if(act==='load-demo'){reiniciarMapa();S.farm=demoFarm();S.demo=true;S.done={};S.view='dashboard';S.msg='Se cargó la finca de ejemplo.';}
   else if(act==='cult-yes'){f.tieneCultivos=true;}
   else if(act==='cult-no'){f.tieneCultivos=false;}
   else if(act==='gg'){f.gg=a.dataset.v;}
@@ -82,7 +83,7 @@ document.addEventListener('click',e=>{
   else if(act==='sim-reset'){Object.keys(S.sim).forEach(k=>S.sim[k]=false);}
   else if(act==='reset'){S.confirmReset=true;}
   else if(act==='reset-no'){S.confirmReset=false;}
-  else if(act==='reset-yes'){S.farm=emptyFarm();S.demo=false;S.done={};S.tpl.rows=[];S.confirmReset=false;S.view='wizard';S.step=0;S.ioMsg='Datos borrados.';}
+  else if(act==='reset-yes'){reiniciarMapa();S.farm=emptyFarm();S.demo=false;S.done={};S.tpl.rows=[];S.confirmReset=false;S.view='wizard';S.step=0;S.ioMsg='Datos borrados.';}
   else if(act==='io-copy'){
     const txt=exportarTexto(S.farm,S.ajustes,S.tpl);S.io=txt;render();
     const box=document.getElementById('io-box');const m=document.getElementById('io-msg');
