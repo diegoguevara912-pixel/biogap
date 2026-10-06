@@ -84,6 +84,8 @@ export const S = {
   ajustes: { modulosActivos: [...CONFIG.modulosActivos], niveles: { ...CONFIG.niveles } },
   msg: '',
   casos: [],
+  // Nube (Supabase): sesión por enlace al correo, casos de la comunidad y consentimiento de la sesión actual.
+  nube: { sesion: null, comunidad: [], consentimiento: false, email: '', ocupado: false },
   fertImport: null, // último archivo de fertilización cargado: { archivo, hoja, omitidas, avisos }
   fertUnidad: 'kgha', // unidad de dosis en la pestaña Fertilización: kgha | qqmz // casos guardados por el usuario en este navegador (memoria de casos)
   // Módulo de riego: datos de entrada, de dónde salieron y lo que el archivo traía calculado.

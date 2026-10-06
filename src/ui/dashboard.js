@@ -146,7 +146,7 @@ export function viewDashboard(){
     <p class="muted small">Secciones por verificar con el checklist oficial de IFA v6.</p>
   </section>`:''}
   <section class="panel flat">
-    <div><h3>Tus datos</h3><p class="muted small">Se guardan en este navegador. Para llevarlos a otro equipo, exporta un archivo o copia el respaldo en texto; para cargarlos, importa el archivo o pega el texto.</p></div>
+    <div><h3>Tus datos</h3><p class="muted small">Se guardan en este navegador (la nube es opcional, en la pestaña Casos). Para llevarlos a otro equipo, exporta un archivo o copia el respaldo en texto; para cargarlos, importa el archivo o pega el texto.</p></div>
     <div class="f"><label for="io-box">Respaldo en texto (JSON)</label><textarea id="io-box" data-bind="io" placeholder="Pega aquí un respaldo y pulsa Cargar">${esc(S.io)}</textarea></div>
     <div class="row">
       <button class="btn sm" data-act="io-copy">Copiar respaldo</button>

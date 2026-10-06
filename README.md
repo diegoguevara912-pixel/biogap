@@ -21,13 +21,19 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 3. **Plantillas** de registro (mecanización y personalizada; riego y fertilización tienen su pestaña) comparadas con el objetivo de la finca.
 4. **Panel GLOBALG.A.P.** con el margen de Minor Musts y las no conformidades abiertas.
 5. **Ajustes** para activar o desactivar módulos y mover los umbrales de riesgo. Tema claro, oscuro o del sistema.
-6. **Guardar y cargar**: autoguardado en el navegador y exportar o importar la finca como archivo `.json`.
+6. **Guardar y cargar**: autoguardado en el navegador, exportar o importar la finca como archivo `.json`, y copia privada opcional en la nube.
 7. **Memoria de casos (k-NN)**: compara tu finca con los casos guardados por cultivo, riego, pendiente, distancia al agua, especies nativas, meses de coincidencia y riesgo por módulo. Muestra las 3 más parecidas, en qué se parecen, qué hicieron y cómo les fue (no conformidades GLOBALG.A.P. y lámina aplicada/requerida, antes y después). Trae 9 casos de **ejemplo** (ficticios, marcados así en pantalla) y permite guardar tu finca como caso.
 8. **Plan de fertilización**: cada aplicación con producto (grado N-P₂O₅-K₂O), dosis en kg/ha o qq/mz, mes y método. Calcula N, P₂O₅ y K₂O frente al objetivo, N por mes frente a la lluvia, efectos en Suelo y Agua; se escribe a mano o se carga una plantilla Excel/CSV.
 9. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
 10. **Mapa satelital de la finca** (debajo del perfil de riesgo): ubicar la finca por coordenadas, tocando el mapa o con el GPS del dispositivo, y dibujar su contorno para calcular el área. Avisa si el punto cae fuera de Honduras o si el área dibujada difiere más de 20 % de la declarada. Imagen EOxCloudless (Sentinel-2, ~10 m): uso no comercial con atribución; un uso comercial necesita licencia de EOX.
 
-Los datos de la finca se guardan solo en el navegador del usuario. No se envían a ningún servidor. Las coordenadas del mapa se guardan aparte y **no** van en el archivo exportado ni en la memoria de casos; el navegador sí descarga las imágenes del servicio de EOX según la zona que se mira.
+**Datos y privacidad.** Por defecto, los datos de la finca se guardan solo en el navegador del usuario. La nube es **opcional** (pestaña Casos, panel «Nube y comunidad»):
+
+- **Tu finca completa** (con nombre y todos sus datos) se guarda en Supabase solo si inicias sesión (enlace al correo, sin contraseñas) y pulsas *Guardar mi finca en la nube*. Es privada: la seguridad por filas (RLS) hace que solo tú la leas o la cambies.
+- **Un caso anónimo** se comparte solo si marcas el consentimiento y pulsas *Compartir mi caso anónimo*: perfil por rasgos (0-1), riesgo por módulo, acciones y resultado. Nunca nombre, lugar, especies ni coordenadas. Puedes retirar todos tus casos cuando quieras.
+- Los casos compartidos los puede leer cualquiera, sin sesión y sin saber de quién son.
+- Sin conexión o sin sesión, la app funciona igual que antes. Detalles y decisiones en [docs/nube.md](docs/nube.md).
+- **El mapa satelital:** las coordenadas se guardan aparte, solo en este navegador, y **no** van en el archivo exportado, en la nube ni en la memoria de casos. El navegador sí descarga las imágenes del servicio de EOX según la zona que se mira.
 
 ## Cómo verla
 
@@ -58,7 +64,9 @@ src/
 ├─ casos/              memoria de casos (Etapa 1 del plan de ML)
 │  ├─ perfil.js         rasgos comparables de una finca
 │  ├─ memoria.js        similitud, k-NN y resumen del resultado
-│  └─ ejemplos.js       9 casos de ejemplo (ficticios)
+│  ├─ ejemplos.js       9 casos de ejemplo (ficticios)
+│  └─ anonimo.js        caso anonimizado para compartir y validación de lo que baja de la nube
+├─ nube/               cliente de Supabase (Auth y REST con fetch, sin dependencias)
 ├─ mapa/               geo.js (proyección, teselas, área, avisos) y ubicacion.js (guardado aparte)
 ├─ fert/               plan de fertilización: catálogo, nutrientes, costos y hallazgos
 ├─ riego/              módulo de riego por goteo
@@ -71,6 +79,7 @@ src/
 docs/formulas.md        fórmula, supuestos y estado de calibración de cada módulo
 docs/catalogo-riego.md  fórmulas, rangos y reglas del módulo de riego
 docs/adr/               decisiones de diseño
+docs/nube.md            Etapa 2: tablas, políticas, consentimiento y cómo probarla
 tests/                  pruebas del motor
 ```
 
