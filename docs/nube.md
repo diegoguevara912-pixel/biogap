@@ -17,6 +17,10 @@ Garantías puestas en la base, no solo en la app:
 - `anon` no puede leer `user_id` ni `consentimiento` (privilegios por columna), y no toca `fincas`.
 - Un usuario solo inserta y borra casos con su propio `user_id`.
 
+## Sesión
+
+El enlace del correo inicia la sesión en ese navegador. El token de acceso dura cerca de una hora (valor por defecto de Supabase), pero la app guarda también el token de renovación y lo cambia por uno nuevo sola, al abrir la app y antes de cada acción de la nube. Así no hay que volver a escribir el correo salvo que se cierre la sesión o Supabase rechace la renovación (por ejemplo, tras 30 días sin entrar o si se cierra la sesión en otro lado). Supabase rota ese token (sirve una sola vez), por eso la app lo guarda de inmediato y nunca lanza dos renovaciones a la vez. Sin conexión, la sesión no se pierde.
+
 ## Consentimiento y anonimización
 
 Solo se comparte un caso si la persona inicia sesión, marca la casilla de consentimiento y pulsa *Compartir mi caso anónimo*. Antes puede ver exactamente el JSON que se enviaría. El consentimiento se pide en cada envío y queda su fecha. *Retirar todos mis casos compartidos* los borra. La finca demostrativa no se comparte.
