@@ -15,14 +15,20 @@ export class ErrorNube extends Error {
   constructor(mensaje, estado = 0) { super(mensaje); this.estado = estado; }
 }
 
-// Sesión guardada. Un valor viejo, vencido o mal formado se descarta.
+// Sesión guardada. Una sesión mal formada se descarta. Una vencida se conserva si trae `refresh`:
+// el token de acceso dura cerca de una hora, pero con el de renovación la app la extiende sola.
 export function cargarSesion(ahora = Date.now()) {
   try {
     const o = JSON.parse(localStorage.getItem(CLAVE_SESION) || 'null');
-    if (!o || typeof o.token !== 'string' || typeof o.uid !== 'string' || !(o.expira * 1000 > ahora)) return null;
-    return { token: o.token, uid: o.uid, email: typeof o.email === 'string' ? o.email.slice(0, 200) : '', expira: o.expira };
+    if (!o || typeof o.token !== 'string' || typeof o.uid !== 'string' || !Number.isFinite(o.expira)) return null;
+    const refresh = typeof o.refresh === 'string' && o.refresh ? o.refresh.slice(0, 500) : '';
+    if (!refresh && !(o.expira * 1000 > ahora)) return null;
+    return { token: o.token, refresh, uid: o.uid, email: typeof o.email === 'string' ? o.email.slice(0, 200) : '', expira: o.expira };
   } catch { return null; }
 }
+
+// ¿Hay que renovar el token antes de usarlo? Con un margen para que no venza a medio camino.
+export const necesitaRenovar = (s, ahora = Date.now(), margenSeg = 60) => Boolean(s) && s.expira - margenSeg <= Math.floor(ahora / 1000);
 export function guardarSesion(s) { try { localStorage.setItem(CLAVE_SESION, JSON.stringify(s)); } catch { /* sin almacenamiento */ } }
 export function borrarSesion() { try { localStorage.removeItem(CLAVE_SESION); } catch { /* sin almacenamiento */ } }
 
@@ -38,7 +44,7 @@ export function sesionDeHash(hash, ahora = Date.now()) {
   const dur = Number(q.get('expires_in'));
   const expira = Number.isFinite(dur) && dur > 0 ? Math.floor(ahora / 1000) + dur : Number(carga.exp);
   if (!(expira * 1000 > ahora)) return null;
-  return { token, uid: carga.sub, email: typeof carga.email === 'string' ? carga.email : '', expira };
+  return { token, refresh: (q.get('refresh_token') || '').slice(0, 500), uid: carga.sub, email: typeof carga.email === 'string' ? carga.email : '', expira };
 }
 
 export function crearCliente({ cfg = CONFIG, fetchFn = globalThis.fetch } = {}) {
@@ -69,6 +75,22 @@ export function crearCliente({ cfg = CONFIG, fetchFn = globalThis.fetch } = {}) 
 
   return {
     activo,
+    // Cambia el token de renovación por una sesión nueva. Supabase rota el token de renovación (sirve una sola vez):
+    // quien llame debe guardar la sesión devuelta de inmediato y no lanzar dos renovaciones a la vez.
+    // Solo si Supabase lo rechaza se pide volver a entrar (401); sin conexión la sesión se conserva.
+    async renovarSesion(sesion, ahora = Date.now()) {
+      const vuelve = new ErrorNube('Tu sesión venció: vuelve a iniciar sesión.', 401);
+      if (!sesion?.refresh) throw vuelve;
+      let r;
+      try { r = await pedir('/auth/v1/token?grant_type=refresh_token', { metodo: 'POST', cuerpo: { refresh_token: sesion.refresh } }); }
+      catch (e) { throw e instanceof ErrorNube && [400, 401, 403].includes(e.estado) ? vuelve : e; }
+      const dur = Number(r?.expires_in);
+      if (typeof r?.access_token !== 'string' || typeof r?.refresh_token !== 'string' || !(dur > 0)) throw vuelve;
+      return {
+        token: r.access_token, refresh: r.refresh_token.slice(0, 500), uid: typeof r.user?.id === 'string' ? r.user.id : sesion.uid,
+        email: typeof r.user?.email === 'string' ? r.user.email.slice(0, 200) : sesion.email, expira: Math.floor(ahora / 1000) + dur,
+      };
+    },
     // Envía el enlace mágico al correo. No crea contraseñas.
     enviarEnlace: (email, volverA) => pedir(`/auth/v1/otp?redirect_to=${encodeURIComponent(volverA)}`, { metodo: 'POST', cuerpo: { email, create_user: true } }),
 

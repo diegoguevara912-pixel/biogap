@@ -13,7 +13,7 @@ import { producto, UNIDADES } from './fert/catalogo.js';
 import { extraerFert, PLANTILLA_CSV } from './fert/extraer.js';
 import { nombreCultivoPrincipal } from './casos/perfil.js';
 import { casoAnonimo } from './casos/anonimo.js';
-import { crearCliente, cargarSesion, guardarSesion, borrarSesion, sesionDeHash, ErrorNube } from './nube/cliente.js';
+import { crearCliente, cargarSesion, guardarSesion, borrarSesion, sesionDeHash, necesitaRenovar, ErrorNube } from './nube/cliente.js';
 import { casoEjemplo, riegoVacio, declaradosEjemplo } from './riego/calculo.js';
 import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
 import { leerCsv } from './riego/csv.js';
@@ -29,6 +29,14 @@ const nube = crearCliente();
 const delHash = sesionDeHash(location.hash); // al volver del enlace del correo
 if (delHash) { guardarSesion(delHash); history.replaceState(null, '', location.pathname + location.search); }
 S.nube.sesion = delHash || cargarSesion();
+// Sesión lista para usarse: si el token está por vencer, se renueva con el de renovación (una sola renovación a la vez).
+let renovando = null;
+function sesionLista() {
+  const n = S.nube;
+  if (!n.sesion || !necesitaRenovar(n.sesion)) return Promise.resolve(n.sesion);
+  renovando ??= nube.renovarSesion(n.sesion).then((s) => { guardarSesion(s); n.sesion = s; return s; }).finally(() => { renovando = null; });
+  return renovando;
+}
 
 function applyTheme(){const r=document.documentElement;if(S.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',S.theme);
   const b=document.getElementById('theme-btn');if(b)b.textContent='Tema: '+({system:'sistema',light:'claro',dark:'oscuro'}[S.theme]);}
@@ -128,6 +136,7 @@ document.addEventListener('change',e=>{const el=e.target;
   const vuelve=el.tagName==='SELECT'||'rerender' in el.dataset||['farm.area','farm.areaProd','farm.nAplicado','farm.nObjetivo'].includes(el.dataset.bind);
   if(vuelve)queueMicrotask(render);}); // diferido: el cambio puede llegar durante un blur
 applyTheme();render();
+if(nube.activo&&S.nube.sesion)sesionLista().then(()=>render(),(err)=>{if(err.estado===401){borrarSesion();S.nube.sesion=null;render();}}); // renueva la sesión al abrir
 if(nube.activo)nubeAccion('nube-comunidad',true); // casos de la comunidad: lectura pública, sin sesión
 
 // Exportar e importar la finca como archivo JSON.
@@ -210,20 +219,22 @@ function importarRiego(){
 async function nubeAccion(act,silenciosa=false){
   const n=S.nube;if(n.ocupado)return;n.ocupado=true;if(!silenciosa)render();
   try{
+    const ses=['nube-guardar','nube-cargar','nube-compartir','nube-retirar'].includes(act)?await sesionLista():null;
+    if(['nube-guardar','nube-cargar','nube-compartir','nube-retirar'].includes(act)&&!ses)throw new ErrorNube('Inicia sesión para usar la nube.');
     if(act==='nube-enlace'){
       const email=n.email.trim();if(!/^\S+@\S+\.\S+$/.test(email))throw new ErrorNube('Escribe un correo válido.');
       await nube.enviarEnlace(email,location.origin+location.pathname);S.msg=`Te enviamos un enlace a ${email}. Ábrelo en este navegador para iniciar sesión.`;}
     else if(act==='nube-salir'){borrarSesion();n.sesion=null;n.consentimiento=false;S.msg='Sesión cerrada.';}
-    else if(act==='nube-guardar'){await nube.guardarFinca(S.farm,n.sesion);S.msg='Tu finca quedó guardada en la nube (privada).';}
-    else if(act==='nube-cargar'){const f=await nube.cargarFinca(n.sesion);
+    else if(act==='nube-guardar'){await nube.guardarFinca(S.farm,ses);S.msg='Tu finca quedó guardada en la nube (privada).';}
+    else if(act==='nube-cargar'){const f=await nube.cargarFinca(ses);
       if(!f)S.msg='Todavía no hay una finca tuya en la nube.';
       else{S.farm=f;S.demo=false;S.done={};S.msg=`Se cargó la finca "${f.nombre||'sin nombre'}" desde la nube.`;}}
     else if(act==='nube-compartir'){
       if(!n.consentimiento||S.demo)throw new ErrorNube('Marca el consentimiento con tu finca real para compartir.');
-      await nube.compartirCaso(casoAnonimo(S.farm,configEfectiva(normalizarAjustes(S.ajustes))),n.sesion);
+      await nube.compartirCaso(casoAnonimo(S.farm,configEfectiva(normalizarAjustes(S.ajustes))),ses);
       n.consentimiento=false;S.msg='Gracias: tu caso anónimo quedó compartido.';
       n.comunidad=await nube.casosComunidad();}
-    else if(act==='nube-retirar'){await nube.retirarMisCasos(n.sesion);S.msg='Se retiraron todos tus casos compartidos.';n.comunidad=await nube.casosComunidad();}
+    else if(act==='nube-retirar'){await nube.retirarMisCasos(ses);S.msg='Se retiraron todos tus casos compartidos.';n.comunidad=await nube.casosComunidad();}
     else if(act==='nube-comunidad'){n.comunidad=await nube.casosComunidad();if(!silenciosa)S.msg=`Se descargaron ${n.comunidad.length} caso(s) de la comunidad.`;}
   }catch(err){
     if(err instanceof ErrorNube){if(err.estado===401){borrarSesion();n.sesion=null;}if(!silenciosa)S.msg=err.message;}

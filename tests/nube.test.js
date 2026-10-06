@@ -165,3 +165,58 @@ test('la sesión se lee del hash del enlace del correo y solo si es válida', ()
   assert.equal(sesionDeHash(`#access_token=${jwt({ email: 'sin-sub@b.co' })}&expires_in=3600`, ahora), null);
   assert.equal(sesionDeHash(`#access_token=${jwt({ sub: 'u1', exp: 1 })}`, ahora), null); // ya venció
 });
+
+// ── Renovación de la sesión ────────────────────────────────────────────────
+import { necesitaRenovar, cargarSesion } from '../src/nube/cliente.js';
+const conAlmacen = (valor, fn) => {
+  const antes = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => (valor === undefined ? null : JSON.stringify(valor)), setItem() {}, removeItem() {} };
+  try { return fn(); } finally { if (antes === undefined) delete globalThis.localStorage; else globalThis.localStorage = antes; }
+};
+
+test('la sesión del hash conserva el token de renovación', () => {
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  const ahora = Date.UTC(2026, 9, 6);
+  const jwt = `${b64({ alg: 'HS256' })}.${b64({ sub: 'u1', email: 'a@b.co' })}.f`;
+  const s = sesionDeHash(`#access_token=${jwt}&refresh_token=abc123&expires_in=3600`, ahora);
+  assert.equal(s.refresh, 'abc123');
+});
+
+test('una sesión vencida se conserva si trae token de renovación, y si no, se descarta', () => {
+  const ahora = Date.UTC(2026, 9, 6);
+  const vencida = { token: 't', uid: 'u1', email: 'a@b.co', expira: ahora / 1000 - 10 };
+  assert.equal(conAlmacen({ ...vencida, refresh: 'r1' }, () => cargarSesion(ahora)).refresh, 'r1');
+  assert.equal(conAlmacen(vencida, () => cargarSesion(ahora)), null);
+  assert.equal(conAlmacen({ token: 't', uid: 'u1', expira: 'x', refresh: 'r' }, () => cargarSesion(ahora)), null);
+  assert.equal(conAlmacen(undefined, () => cargarSesion(ahora)), null);
+});
+
+test('se renueva cuando faltan menos de 60 s para que venza', () => {
+  const ahora = Date.UTC(2026, 9, 6), seg = ahora / 1000;
+  assert.equal(necesitaRenovar({ expira: seg + 3000 }, ahora), false);
+  assert.equal(necesitaRenovar({ expira: seg + 30 }, ahora), true);
+  assert.equal(necesitaRenovar({ expira: seg - 5 }, ahora), true);
+  assert.equal(necesitaRenovar(null, ahora), false);
+});
+
+test('renovar cambia el token de renovación por una sesión nueva (y el viejo ya no sirve)', async () => {
+  const ahora = Date.UTC(2026, 9, 6);
+  const s = simulador(respuesta({ access_token: 'nuevo', refresh_token: 'r2', expires_in: 3600, user: { id: 'u1', email: 'a@b.co' } }));
+  const nueva = await crearCliente({ cfg: cfgOk, fetchFn: s.fn }).renovarSesion({ token: 'viejo', refresh: 'r1', uid: 'u1', email: '', expira: 0 }, ahora);
+  assert.deepEqual(nueva, { token: 'nuevo', refresh: 'r2', uid: 'u1', email: 'a@b.co', expira: ahora / 1000 + 3600 });
+  assert.match(s.llamadas[0].url, /\/auth\/v1\/token\?grant_type=refresh_token$/);
+  assert.deepEqual(JSON.parse(s.llamadas[0].body), { refresh_token: 'r1' });
+  assert.equal(s.llamadas[0].headers.Authorization, undefined);
+});
+
+test('si Supabase rechaza la renovación se pide volver a entrar; sin conexión no se pierde la sesión', async () => {
+  const sesion = { token: 't', refresh: 'r1', uid: 'u1', email: '', expira: 0 };
+  for (const estado of [400, 401, 403]) {
+    const c = crearCliente({ cfg: cfgOk, fetchFn: simulador(respuesta({ error: 'invalid_grant' }, estado)).fn });
+    await assert.rejects(() => c.renovarSesion(sesion), (e) => e instanceof ErrorNube && e.estado === 401 && /vuelve a iniciar/.test(e.message));
+  }
+  await assert.rejects(() => crearCliente({ cfg: cfgOk, fetchFn: simulador(respuesta({ x: 1 })).fn }).renovarSesion(sesion), (e) => e.estado === 401); // respuesta incompleta
+  await assert.rejects(() => crearCliente({ cfg: cfgOk, fetchFn: simulador().fn }).renovarSesion({ ...sesion, refresh: '' }), (e) => e.estado === 401); // sin token de renovación
+  await assert.rejects(() => crearCliente({ cfg: cfgOk, fetchFn: simulador(new Error('red')).fn }).renovarSesion(sesion), (e) => e instanceof ErrorNube && e.estado === 0); // no es 401: la app no borra la sesión
+  await assert.rejects(() => crearCliente({ cfg: cfgOk, fetchFn: simulador(respuesta({}, 500)).fn }).renovarSesion(sesion), (e) => e.estado === 500);
+});
