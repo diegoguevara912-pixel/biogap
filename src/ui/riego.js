@@ -2,7 +2,7 @@
 // Flujo: cargar archivo (o escribir datos) → revisar datos detectados → leer alertas.
 import { esc } from '../core/utils.js';
 import { S } from '../core/state.js';
-import { calcular } from '../riego/calculo.js';
+import { calcular, NOMBRES_MES } from '../riego/calculo.js';
 import { validar } from '../riego/reglas.js';
 
 const NIVEL = { error: 'Error', advertencia: 'Revisar', criterio: 'Criterio', ok: 'Bien' };
@@ -16,7 +16,11 @@ function campo(id, label, path, valor, unidad, origen, ref) {
 export function viewRiego() {
   const R = S.riego;
   const d = R.datos;
+  // Datos guardados antes de que existiera el ciclo.
+  if (!Array.isArray(d.etoMensual)) d.etoMensual = Array(12).fill(null);
+  if (typeof d.siembra !== 'string') d.siembra = '';
   const r = calcular(d);
+  const c = r.ciclo;
   const alertas = validar(r, R.declarados || {});
   const o = R.origen || {};
   const ref = r.referencia;
@@ -111,6 +115,38 @@ export function viewRiego() {
     </tbody></table></div>
     <div><button class="btn small" data-act="riego-add-suelo">Agregar sección</button></div>
     <p class="muted" style="font-size:13px">Texturas: A arenoso · FA franco arenoso · F franco · Far franco arcilloso · ArA arcillo arenoso · Ar arcilloso (tabla CIMMYT 2012 del Lab de Riego).</p>
+    ${r.suelo.some((x) => x.laaPorMetro !== undefined) ? `<h3>Por qué hay tres láminas</h3>
+    <p class="muted">Las tres usan agua disponible × p × (1 − piedras) × 10. Cambia la profundidad y la p:</p>
+    <div class="scroll"><table class="data"><thead><tr><th>Sección</th>
+      <th class="num">Por metro de suelo, p = ${fmt(d.p, 2)} (como muchas hojas)</th>
+      <th class="num">En ${fmt(d.profRaiz, 2)} m de raíces, p = ${fmt(d.p, 2)}</th>
+      <th class="num">En raíces, p ajustada = ${fmt(r.pAjustada, 2)} (la que usa la app)</th>
+    </tr></thead><tbody>
+      ${r.suelo.map((x) => `<tr><td>${esc(x.nombre)}</td><td class="num">${fmt(x.laaPorMetro)} mm</td><td class="num">${fmt(x.laaSinAjuste)} mm</td><td class="num"><b>${fmt(x.laa)} mm</b></td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="muted" style="font-size:13px">La primera ignora que las raíces solo llegan a ${fmt(d.profRaiz, 2)} m. La segunda es la fórmula de la clase. La tercera además baja p porque con ETc alta la planta se estresa antes (FAO-56, Tabla 22); la app la usa para el intervalo entre riegos porque es la más segura.</p>` : ''}
+  </section>
+
+  <section class="panel">
+    <div><h2>Consumo del ciclo</h2><p class="muted">ETc de cada etapa = Kc promedio de la etapa × suma de la ETo de sus días. Ingresa la fecha de siembra y la ETo media diaria de cada mes; los meses vacíos usan la ETo pico.</p></div>
+    <div class="fields">
+      <div class="f"><label for="rg-siembra">Fecha de siembra</label><input id="rg-siembra" type="date" data-bind="riego.datos.siembra" data-rerender value="${esc(d.siembra)}"></div>
+      <div class="f"><label class="check"><input type="checkbox" style="width:auto" data-bind="riego.datos.mes30" data-rerender ${d.mes30 ? 'checked' : ''}> Meses de 30 días (como en la clase)</label></div>
+    </div>
+    <div class="fields">
+      ${NOMBRES_MES.map((m, i) => `<div class="f" style="max-width:110px"><label for="rg-eto-${i}">${m[0].toUpperCase() + m.slice(1, 3)}</label><input id="rg-eto-${i}" type="number" step="any" inputmode="decimal" data-bind="riego.datos.etoMensual.${i}" data-nullable data-rerender value="${d.etoMensual[i] ?? ''}"><span class="hint">mm/día</span></div>`).join('')}
+    </div>
+    ${c ? `<div class="scroll"><table class="data"><thead><tr><th>Etapa</th><th class="num">Días</th><th>Meses</th><th class="num">Kc promedio</th><th class="num">Σ ETo (mm)</th><th class="num">ETc (mm)</th></tr></thead><tbody>
+      ${c.etapas.map((e) => `<tr><td>${e.nombre}</td><td class="num">${e.dias}</td><td>${c.fuenteEto === 'mensual' ? esc(e.meses.join(', ')) : 'ETo pico'}</td><td class="num">${fmt(e.kc, 3)}</td><td class="num">${fmt(e.etoSum)}</td><td class="num">${fmt(e.etc)}</td></tr>`).join('')}
+      <tr><td><b>Ciclo</b></td><td class="num"><b>${r.cicloDias}</b></td><td></td><td></td><td></td><td class="num"><b>${fmt(c.etcCiclo)}</b></td></tr>
+    </tbody></table></div>
+    <div class="summary">
+      <div><div class="k">ETc del ciclo</div><div class="v">${fmt(c.etcCiclo)} mm</div></div>
+      <div><div class="k">Volumen neto</div><div class="v">${fmt(c.volumenNeto, 0)} m³</div></div>
+      <div><div class="k">Volumen bruto (÷ eficiencia)</div><div class="v">${fmt(c.volumenBruto, 0)} m³</div></div>
+    </div>
+    <p class="muted" style="font-size:13px">1 mm en 1 ha = 10 m³. El bruto es el agua que hay que tener disponible. No descuenta lluvia efectiva.</p>`
+    : '<p class="muted">Faltan Kc, duración de etapas o ETo para calcular el ciclo.</p>'}
   </section>
 
   ${R.fuente === 'archivo' ? `<section class="panel">

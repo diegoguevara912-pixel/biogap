@@ -11,6 +11,8 @@ export function riegoVacio() {
     distPlantas: null, distSurcos: null, hileras: 1,
     caudalEmisor: null, distEmisores: null, distLaterales: null, eficiencia: null,
     eto: null, areaLote: null, horasLaborales: null, frecuenciaDias: 1,
+    // Ciclo: fecha de siembra (AAAA-MM-DD) y ETo media diaria de cada mes (enero = 0).
+    siembra: '', etoMensual: Array(12).fill(null), mes30: false,
     suelo: [],
   };
 }
@@ -24,6 +26,9 @@ export function casoEjemplo() {
     distPlantas: 0.3, distSurcos: 0.8, hileras: 1,
     caudalEmisor: 1.2, distEmisores: 0.3, distLaterales: 0.8, eficiencia: 0.9,
     eto: 6.84, areaLote: 12.43, horasLaborales: 11, frecuenciaDias: 1,
+    // Siembra y ETo media diaria por mes (2024): hoja ETC de la cubicación del reservorio, mismo autor.
+    // Mayo es el promedio de los 4 días del ciclo que caen en mayo.
+    siembra: '2024-01-01', etoMensual: [3.55, 4.568, 4.79, 5.036, 4.32, null, null, null, null, null, null, null], mes30: false,
     suelo: [
       { nombre: 'Parte 1', area: 4.989, textura: 'Far', da: 1.35, cc: 27, pmp: 13, pedregosidad: 4, infiltracion: 7 },
       { nombre: 'Parte 2', area: 4.88, textura: 'F', da: 1.42, cc: 22, pmp: 10, pedregosidad: 30, infiltracion: 10 },
@@ -38,8 +43,11 @@ export function declaradosEjemplo() {
     laa: [99.792, 65.604, 49.5],
     numerosFijos: [
       { celda: 'Diseño Agronomico!E24', formula: '=12.43/E23', numero: '12.43', coincide: 'el área del lote' },
-      { celda: 'Diseño Agronomico!E26', formula: '=4896.45136111111*12', numero: '4896.45136111111', coincide: 'un valor sin origen visible' },
+      { celda: 'Diseño Agronomico!E26', formula: '=4896.45136111111*12', numero: '4896.45136111111', etiqueta: 'Volumen requerido por ciclo (m3)', coincide: 'la ETc del ciclo en m³/ha (489.6 mm) copiada de otra hoja, como la cubicación del reservorio' },
+      { celda: 'Diseño Agronomico!E26', formula: '=4896.45136111111*12', numero: '12', etiqueta: 'Volumen requerido por ciclo (m3)', coincide: 'casi el área del lote (12.43 ha)' },
     ],
+    volumenCiclo: 58757.42,
+    etoEsMaximo: true,
   };
 }
 
@@ -79,6 +87,52 @@ export function completar(d) {
 
 // Ajuste de p por ETc (FAO-56, Tabla 22): p = p_tabla + 0.04 (5 − ETc), entre 0.1 y 0.8.
 export const pAjustada = (p, etc) => Math.min(0.8, Math.max(0.1, p + 0.04 * (5 - etc)));
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+export const NOMBRES_MES = MESES;
+const ETAPAS = ['Inicial', 'Desarrollo', 'Media', 'Final'];
+
+// Consumo del ciclo por etapa, como en la clase: ETc de la etapa = Kc promedio de la etapa × suma de la ETo
+// de sus días. Kc promedio: inicial; (inicial + medio)/2; medio; (medio + final)/2 (FAO-56, curva de 4 etapas).
+// La ETo de cada día es la media del mes en que cae. Sin fecha de siembra ni ETo mensual se usa la ETo pico
+// todos los días (sobreestima). mes30: meses de 30 días, la convención de la clase.
+export function calcularCiclo(d) {
+  const kc = [d.kcIni, d.kcMed, d.kcFin];
+  if (kc.some((x) => num(x) === null) || !Array.isArray(d.etapas) || d.etapas.some((x) => !pos(x))) return null;
+  const kcProm = [d.kcIni, (d.kcIni + d.kcMed) / 2, d.kcMed, (d.kcMed + d.kcFin) / 2];
+  const mensual = Array.isArray(d.etoMensual) ? d.etoMensual : [];
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.siembra || '');
+  const conMeses = m && mensual.some((x) => pos(x));
+  if (!conMeses && !pos(d.eto)) return null;
+  const [y, mo, dd] = m ? [+m[1], +m[2] - 1, +m[3]] : [0, 0, 1];
+  const mesDelDia = (i) => (d.mes30 ? (mo + Math.floor((dd - 1 + i) / 30)) % 12 : new Date(Date.UTC(y, mo, dd + i)).getUTCMonth());
+  const faltan = new Set();
+  let dia = 0;
+  const etapas = d.etapas.map((dias, k) => {
+    let etoSum = 0;
+    const meses = new Set();
+    for (let i = 0; i < dias; i++, dia++) {
+      let eto = d.eto;
+      if (conMeses) {
+        const mes = mesDelDia(dia);
+        meses.add(mes);
+        if (pos(mensual[mes])) eto = mensual[mes];
+        else faltan.add(mes);
+      }
+      etoSum += pos(eto) ? eto : 0;
+    }
+    return { nombre: ETAPAS[k], dias, kc: kcProm[k], etoSum, etc: kcProm[k] * etoSum, meses: [...meses].map((x) => MESES[x]) };
+  });
+  const c = { etapas, fuenteEto: conMeses ? 'mensual' : 'pico', mesesSinEto: [...faltan].map((x) => MESES[x]) };
+  // Un mes sin dato usa la ETo pico; si tampoco hay, el cálculo queda incompleto.
+  if (c.mesesSinEto.length && !pos(d.eto)) c.incompleto = true;
+  c.etcCiclo = etapas.reduce((a, e) => a + e.etc, 0);
+  if (pos(d.areaLote)) {
+    c.volumenNeto = c.etcCiclo * 10 * d.areaLote; // m³ (1 mm en 1 ha = 10 m³)
+    if (pos(d.eficiencia)) c.volumenBruto = c.volumenNeto / d.eficiencia;
+  }
+  return c;
+}
 
 export function calcular(entrada) {
   const { datos: d, referencia, usados } = completar(entrada);
@@ -137,6 +191,7 @@ export function calcular(entrada) {
     r.seccionLimitante = r.suelo.find((s) => s.laa === r.laaLimitante)?.nombre;
     r.intervaloMax = Math.floor(r.laaLimitante / r.etc);
   }
+  r.ciclo = calcularCiclo(d);
   const infil = r.suelo.map((s) => s.infiltracion).filter((x) => pos(x));
   if (infil.length) r.infiltracionMin = Math.min(...infil);
   return r;

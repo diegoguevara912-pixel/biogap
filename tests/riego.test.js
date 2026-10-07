@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { calcular, casoEjemplo, riegoVacio, pAjustada } from '../src/riego/calculo.js';
+import { calcular, calcularCiclo, casoEjemplo, declaradosEjemplo, riegoVacio, pAjustada } from '../src/riego/calculo.js';
 import { validar } from '../src/riego/reglas.js';
 import { leerXlsx, ErrorLectura } from '../src/riego/xlsx.js';
 import { leerCsv } from '../src/riego/csv.js';
@@ -126,4 +126,66 @@ test('casos límite: horas insuficientes y suelo que no alcanza ni un día', () 
   const fr = validar(r2).find((x) => x.id === 'frecuencia');
   assert.equal(fr.nivel, 'error');
   assert.match(fr.detalle, /ni con riego diario/);
+});
+
+// Ejercicio de ETc de la clase (Riego y Drenaje, Zamorano), maíz de 3 ha sembrado el 1 de enero, meses de 30 días.
+// Resuelto a mano en /riego/Caso_prueba_ETc_resuelto.xlsx. Con Kc final lineal (0.6) en vez del promedio de
+// los puntos de la tabla (0.6125), la etapa final da 73.8 mm en vez de 75.34.
+test('consumo del ciclo: ejercicio de ETc de la clase', () => {
+  const c = calcularCiclo({ kcIni: 0.1, kcMed: 1.0, kcFin: 0.2, etapas: [20, 30, 40, 30], siembra: '2017-01-01',
+    etoMensual: [3.07, 3.43, 3.88, 4.1], mes30: true, areaLote: 3, eficiencia: 0.9 });
+  assert.equal(c.fuenteEto, 'mensual');
+  assert.deepEqual(c.etapas.map((e) => Math.round(e.etoSum * 10) / 10), [61.4, 99.3, 150.7, 123]);
+  cerca(c.etapas[1].etc, 54.615);
+  cerca(c.etcCiclo, 285.255);
+  cerca(c.volumenNeto, 8557.65);
+  cerca(c.volumenBruto, 9508.5);
+});
+
+test('consumo del ciclo: se acerca a la cubicación del reservorio del Lab (489.6 mm, ETo diaria 2024)', () => {
+  const r = calcular(casoEjemplo());
+  assert.equal(r.ciclo.fuenteEto, 'mensual');
+  assert.deepEqual(r.ciclo.etapas.map((e) => e.dias), [20, 35, 40, 30]);
+  assert.ok(Math.abs(r.ciclo.etcCiclo / 489.645 - 1) < 0.02, `${r.ciclo.etcCiclo}`);
+  // Calendario real: 125 días desde el 1 de enero de 2024 (bisiesto) terminan el 3 de mayo.
+  assert.deepEqual(r.ciclo.etapas[3].meses, ['abril', 'mayo']);
+});
+
+test('consumo del ciclo sin ETo mensual usa la ETo pico y lo avisa', () => {
+  const d = { ...casoEjemplo(), siembra: '' };
+  const r = calcular(d);
+  assert.equal(r.ciclo.fuenteEto, 'pico');
+  cerca(r.ciclo.etcCiclo, 720.765);
+  const a = validar(r, { volumenCiclo: 58757.42 });
+  assert.ok(ids(a, 'criterio').includes('ciclo-eto-pico'));
+  assert.ok(!ids(a).includes('dif-volumenCiclo'), 'no compara un volumen calculado con la ETo pico');
+});
+
+test('volumen por ciclo del Lab: neto, con 12 ha y copiado de otra hoja', () => {
+  const a = validar(calcular(casoEjemplo()), declaradosEjemplo());
+  const adv = ids(a, 'advertencia');
+  assert.ok(adv.includes('volumen-ciclo-neto'));
+  assert.ok(adv.includes('fijo-Diseño Agronomico!E26-12'));
+  assert.ok(ids(a, 'criterio').includes('eto-maximo'));
+  const neto = a.find((x) => x.id === 'volumen-ciclo-neto');
+  assert.match(neto.detalle, /66[.,]944 m³/);
+});
+
+test('distingue cálculos a mano, números pegados, área redondeada y partes no revisadas', () => {
+  const celda = (ref, fila, col, v, f = null) => ({ ref, fila, col, v, f });
+  const libro = { hojas: [
+    { nombre: 'Diseño', celdas: [
+      celda('A1', 1, 1, 'Área del lote (ha)'), celda('B1', 1, 2, 12.43),
+      celda('A2', 2, 1, 'Volumen requerido por ciclo (m3)'), celda('B2', 2, 2, 58757.4, '=4896.45136111111*12'),
+      celda('A3', 3, 1, 'Área del sector (m2)'), celda('B3', 3, 2, 20153.5, '=20781.393-627.885'),
+    ] },
+    { nombre: 'hf en secundaria', celdas: [celda('A1', 1, 1, 'Pérdida de carga Hazen-Williams')] },
+  ] };
+  const x = extraerRiego(libro);
+  assert.deepEqual(x.declarados.calculosAMano, ['Diseño!B3']);
+  assert.deepEqual(x.declarados.numerosFijos.map((h) => h.numero), ['4896.45136111111', '12']);
+  assert.match(x.declarados.numerosFijos[0].coincide, /ETc del ciclo/);
+  assert.equal(x.declarados.volumenCiclo, 58757.4);
+  assert.equal(x.declarados.noRevisa.length, 1);
+  assert.match(x.declarados.noRevisa[0], /hidráulica/);
 });

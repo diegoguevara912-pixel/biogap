@@ -35,6 +35,13 @@ const CAMPOS = [
   { clave: 'caudalHa', nombre: 'Caudal por hectárea declarado', declarado: true, si: [/caudal ?\/ ?hectarea/, /caudal unitar/] },
   { clave: 'sectores', nombre: 'Sectores declarados', declarado: true, si: [/numero de sectores real/, /^sectores$/] },
   { clave: 'caudalSector', nombre: 'Caudal por sector declarado', declarado: true, si: [/caudal instantaneo/] },
+  { clave: 'volumenCiclo', nombre: 'Volumen por ciclo declarado', declarado: true, si: [/volumen (requerido )?(por|del) ciclo/] },
+];
+
+// Partes de un diseño de riego que la app todavía no revisa: se avisa si el archivo las trae.
+const NO_REVISA = [
+  { parte: 'hidráulica (laterales, tuberías y carga de la bomba)', si: /hazen|perdida de carga|\bhf\b|lateral(es)?\b.*(longitud|diametro)|tuberia (secundaria|principal)|\bcdt\b|carga dinamica/ },
+  { parte: 'reservorio (cubicación y evaporación)', si: /reservorio|cubicacion|evaporacion del (espejo|reservorio)/ },
 ];
 
 // Campos de suelo: una columna por sección (Parte 1, Parte 2...).
@@ -87,6 +94,7 @@ export function extraerRiego(libro) {
       else if (def.clave.startsWith('etapa')) datos.etapas[Number(def.clave.slice(5))] = valor;
       else datos[def.clave] = valor;
       origen[def.clave] = { nombre: def.nombre, valor, celda: `${h.nombre.trim()}!${val.ref}`, etiqueta: c.v.trim() };
+      if (def.clave === 'eto' && /^=\s*MAX\(/i.test(val.f || '')) declarados.etoEsMaximo = true;
       break;
     }
   }
@@ -127,19 +135,38 @@ export function extraerRiego(libro) {
   // Números escritos a mano dentro de fórmulas.
   const entradas = { areaLote: 'el área del lote', eto: 'la ETo', caudalEmisor: 'el caudal del emisor', horasLaborales: 'las horas laborales', distPlantas: 'la distancia entre plantas', distSurcos: 'la distancia entre surcos' };
   declarados.numerosFijos = [];
+  declarados.calculosAMano = [];
   for (const h of hojas) for (const c of h.celdas) {
     if (!c.f || /^=\s*-?[\d.]+\s*$/.test(c.f)) continue; // una celda que solo contiene un número es un dato
+    const celda = `${h.nombre.trim()}!${c.ref}`;
+    // Solo números cortos y operaciones, sin celdas: un cálculo a mano con datos medidos, no un dato escondido.
+    // Un decimal muy largo (6 cifras o más) es un resultado pegado y se revisa abajo.
+    if (/^=[\d.\s+\-*/()]+$/.test(c.f) && !/\.\d{6,}/.test(c.f)) { declarados.calculosAMano.push(celda); continue; }
+    const rotulo = (h.filas.get(c.fila) || []).find((x) => x.col < c.col && typeof x.v === 'string' && x.v.trim());
+    const etiqueta = rotulo ? normalizar(rotulo.v) : '';
     const limpia = c.f.replace(/'[^']*'!/g, ' ').replace(/"[^"]*"/g, ' ').replace(/\[[^\]]*\]/g, ' ').replace(/\$?[A-Z]{1,3}\$?\d+/g, ' ');
     for (const m of limpia.matchAll(/(?<![\w.])(\d+(?:\.\d+)?)(?![\w.])/g)) {
       const n = Number(m[1]);
+      const item = { celda, formula: c.f, numero: m[1], etiqueta: rotulo ? rotulo.v.trim() : '' };
+      // Un número cercano al área, pero no igual, en un cálculo de área o volumen (p. ej. 12 en vez de 12.43 ha).
+      const area = datos.areaLote;
+      if (typeof area === 'number' && Number.isInteger(n) && n !== area && Math.abs(n - area) <= 0.1 * area && /volumen|area|ciclo/.test(etiqueta)) {
+        declarados.numerosFijos.push({ ...item, coincide: `casi el área del lote (${area} ha)` });
+        continue;
+      }
       if (CONSTANTES.has(n)) continue;
       const igual = Object.entries(entradas).find(([k]) => typeof datos[k] === 'number' && Math.abs(datos[k] - n) <= 1e-6 * Math.max(1, Math.abs(n)));
       const largo = (m[1].split('.')[1] || '').length >= 3 && n >= 10;
-      if (igual || largo) {
-        declarados.numerosFijos.push({ celda: `${h.nombre.trim()}!${c.ref}`, formula: c.f, numero: m[1], coincide: igual ? igual[1] : (largo ? 'un valor sin origen visible' : null) });
-      }
+      if (igual) declarados.numerosFijos.push({ ...item, coincide: igual[1] });
+      else if (largo && /ciclo/.test(etiqueta) && n >= 500 && n <= 30000) {
+        declarados.numerosFijos.push({ ...item, coincide: `la ETc del ciclo en m³/ha (${(n / 10).toFixed(1)} mm) copiada de otra hoja, como la cubicación del reservorio` });
+      } else if (largo) declarados.numerosFijos.push({ ...item, coincide: 'un valor sin origen visible' });
     }
   }
+
+  // Partes del archivo que la app no revisa.
+  const textos = [...hojas.map((h) => normalizar(h.nombre)), ...etiquetas.map((e) => e.texto)];
+  declarados.noRevisa = NO_REVISA.filter((x) => textos.some((t) => x.si.test(t))).map((x) => x.parte);
 
   const faltan = CAMPOS.filter((d) => !d.declarado && !origen[d.clave]).map((d) => d.nombre);
   return { datos, declarados, origen, faltan };

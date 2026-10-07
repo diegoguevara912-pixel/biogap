@@ -122,8 +122,53 @@ export function validar(r, declarados = {}) {
 
   // 12. Números escritos a mano dentro de fórmulas
   for (const h of declarados.numerosFijos || []) {
-    out.push(alerta(`fijo-${h.celda}`, 'advertencia', `Número escrito a mano en ${h.celda}`,
+    if (h.coincide?.startsWith('casi el área')) {
+      out.push(alerta(`fijo-${h.celda}-${h.numero}`, 'advertencia', `Área redondeada en ${h.celda}`,
+        `La fórmula ${h.formula} multiplica por ${h.numero}, que es ${h.coincide} pero no igual. El resultado queda ${Math.round(Math.abs(1 - Number(h.numero) / d.areaLote) * 100)} % ${Number(h.numero) < d.areaLote ? 'corto' : 'de más'}: conviene referenciar la celda del área.`));
+      continue;
+    }
+    out.push(alerta(`fijo-${h.celda}-${h.numero}`, 'advertencia', `Número escrito a mano en ${h.celda}`,
       `La fórmula ${h.formula} usa ${h.numero} directamente${h.coincide ? `, que es ${h.coincide}` : ''}. Si ese dato cambia, este resultado queda mal sin aviso: conviene referenciar la celda del dato.`));
+  }
+  const aMano = declarados.calculosAMano || [];
+  if (aMano.length) {
+    out.push(alerta('calculos-a-mano', 'criterio', 'Cálculos hechos a mano dentro de celdas',
+      `${aMano.length === 1 ? 'La celda' : `Las ${aMano.length} celdas`} ${aMano.slice(0, 6).join(', ')}${aMano.length > 6 ? '…' : ''} ${aMano.length === 1 ? 'opera' : 'operan'} solo con números escritos (por ejemplo, áreas medidas menos caminos). No es un error, pero anota de dónde salió cada número para que otro pueda revisarlo.`));
+  }
+
+  // 14. Consumo del ciclo
+  const c = r.ciclo;
+  if (c) {
+    if (c.fuenteEto === 'pico') {
+      out.push(alerta('ciclo-eto-pico', 'criterio', 'El consumo del ciclo usa la ETo pico todos los días',
+        `Da ${f1(c.etcCiclo)} mm porque supone ${f2(d.eto)} mm/día de ETo durante los ${r.cicloDias} días. Eso sobreestima el agua del ciclo${typeof declarados.volumenCiclo === 'number' ? ` y no se puede comparar con los ${Math.round(declarados.volumenCiclo).toLocaleString('es-HN')} m³ que dice el archivo` : ''}. Ingresa la fecha de siembra y la ETo media de cada mes en "Consumo del ciclo".`));
+    } else if (c.mesesSinEto.length) {
+      out.push(alerta('ciclo-meses', c.incompleto ? 'advertencia' : 'criterio', 'Faltan meses de ETo en el ciclo',
+        `No hay ETo para ${c.mesesSinEto.join(', ')}. ${c.incompleto ? 'Esos días quedan sin consumo y el ciclo sale corto.' : `Esos días se calcularon con la ETo pico (${f2(d.eto)} mm/día), que sobreestima.`}`));
+    }
+    const dec = declarados.volumenCiclo;
+    if (typeof dec === 'number' && c.volumenNeto && c.fuenteEto === 'mensual') {
+      const neto = cerca(dec, c.volumenNeto, 0.05), bruto = c.volumenBruto && cerca(dec, c.volumenBruto, 0.05);
+      if (neto && c.volumenBruto && !bruto) {
+        out.push(alerta('volumen-ciclo-neto', 'advertencia', 'El volumen por ciclo no incluye la eficiencia',
+          `El archivo dice ${Math.round(dec).toLocaleString('es-HN')} m³, que es el volumen neto (la app calcula ${Math.round(c.volumenNeto).toLocaleString('es-HN')} m³ netos). Con eficiencia de ${f2(d.eficiencia)} hay que disponer de ${Math.round(c.volumenBruto).toLocaleString('es-HN')} m³.`));
+      } else if (!neto && !bruto) {
+        out.push(alerta('dif-volumenCiclo', 'advertencia', 'El volumen por ciclo no cuadra con sus datos',
+          `El archivo dice ${Math.round(dec).toLocaleString('es-HN')} m³; con sus datos la app calcula ${Math.round(c.volumenNeto).toLocaleString('es-HN')} m³ netos${c.volumenBruto ? ` y ${Math.round(c.volumenBruto).toLocaleString('es-HN')} m³ brutos` : ''}. Revisa la ETo, las etapas y el área usadas.`));
+      }
+    }
+  }
+
+  // 15. ETo de diseño = máximo de un solo día
+  if (declarados.etoEsMaximo && d.eto) {
+    out.push(alerta('eto-maximo', 'criterio', 'La ETo de diseño es el día más alto del registro',
+      `Se usa ${f2(d.eto)} mm/día, el máximo de la serie (fórmula MAX). Diseñar para el peor día es conservador y válido, pero un pico aislado sobredimensiona el sistema: compáralo con los máximos de otros años o con un percentil alto.`));
+  }
+
+  // 16. Partes del archivo que la app no revisa
+  if (declarados.noRevisa?.length) {
+    out.push(alerta('no-revisa', 'criterio', 'Parte del archivo que la app todavía no revisa',
+      `El archivo trae ${declarados.noRevisa.join(' y ')}. La app solo revisa el diseño agronómico y el consumo del ciclo, así que esa parte no tiene alertas aunque tenga errores.`));
   }
 
   // 13. Datos completados con referencia
