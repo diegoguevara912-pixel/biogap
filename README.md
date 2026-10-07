@@ -16,7 +16,7 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 
 ## Qué hace
 
-1. **Cuestionario** de la finca en seis pasos: finca, cultivos, especies, prácticas, calendarios y certificación.
+1. **Cuestionario** de la finca en seis pasos: finca, cultivos, especies, prácticas, calendarios y certificación. Los plaguicidas ya no se capturan aquí: tienen su pestaña.
 2. **Dashboard** con el índice ambiental global, el riesgo (0-100) por módulo, la presión por mes, el cruce de calendarios, un **simulador** ("¿qué pasa si cambio esta práctica?") y un **plan de acción** con casillas.
 3. **Plantillas** de registro (mecanización y personalizada; riego y fertilización tienen su pestaña) comparadas con el objetivo de la finca.
 4. **Panel GLOBALG.A.P.** con el margen de Minor Musts y las no conformidades abiertas.
@@ -26,6 +26,7 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 8. **Plan de fertilización**: cada aplicación con producto (grado N-P₂O₅-K₂O), dosis en kg/ha o qq/mz, mes y método. Calcula N, P₂O₅ y K₂O frente al objetivo, N por mes frente a la lluvia, efectos en Suelo y Agua; se escribe a mano o se carga una plantilla Excel/CSV.
 9. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
 10. **Mapa satelital de la finca** (debajo del perfil de riesgo): ubicar la finca por coordenadas, tocando el mapa o con el GPS del dispositivo, y dibujar su contorno para calcular el área. Avisa si el punto cae fuera de Honduras o si el área dibujada difiere más de 20 % de la declarada. Imagen EOxCloudless (Sentinel-2, ~10 m): uso no comercial con atribución; un uso comercial necesita licencia de EOX.
+11. **Plaguicidas**: cada aplicación con producto, ingrediente activo, dosis y meses. Calcula el peligro para abejas y otros himenópteros polinizadores con el cociente de peligro de la FAO (HQ = g de i.a./ha ÷ DL50 por contacto; umbral 42 o 85), con un margen ×10 si la finca registra abejas sin aguijón. Revisa la etiqueta, las condiciones de aplicación, la eficacia contra la enfermedad (cuadro de fungicidas de la SAG, 132 productos) y la rotación por grupo, y lo cruza con la floración, la cosecha, el riego y la fertilización. Ver [docs/formulas.md](docs/formulas.md#plaguicidas-pestaña-plaguicidas).
 
 **Datos y privacidad.** Por defecto, los datos de la finca se guardan solo en el navegador del usuario. La nube es **opcional** (pestaña Casos, panel «Nube y comunidad»):
 
@@ -69,13 +70,18 @@ src/
 ├─ nube/               cliente de Supabase (Auth y REST con fetch, sin dependencias)
 ├─ mapa/               geo.js (proyección, teselas, área, avisos) y ubicacion.js (guardado aparte)
 ├─ fert/               plan de fertilización: catálogo, nutrientes, costos y hallazgos
+├─ plag/               plaguicidas
+│  ├─ modelo.js         una aplicación: campos, unidades y validación (los .json viejos se cargan igual)
+│  ├─ catalogo.js       53 ingredientes activos con DL50, grupo y GUS de su ficha del PPDB o BPDB
+│  ├─ sag.js            cuadro de fungicidas de la SAG: productos, enfermedades y eficacia
+│  └─ calculo.js        dosis por hectárea, HQ, avisos con fuente y rotación
 ├─ riego/              módulo de riego por goteo
 │  ├─ referencias.js    valores con fuente (FAO-56, CIMMYT)
 │  ├─ calculo.js        fórmulas del diseño agronómico
 │  ├─ reglas.js         validación: cada alerta con su porqué y su fuente
 │  ├─ xlsx.js, csv.js   lectura de archivos sin dependencias externas
 │  └─ extraer.js        de las celdas a los datos, por etiquetas
-└─ ui/                  vistas: dashboard, cuestionario, plantillas, riego, casos, ajustes y gráficos
+└─ ui/                  vistas: dashboard, cuestionario, plantillas, riego, fertilización, plaguicidas, casos, ajustes y gráficos
 docs/formulas.md        fórmula, supuestos y estado de calibración de cada módulo
 docs/catalogo-riego.md  fórmulas, rangos y reglas del módulo de riego
 docs/adr/               decisiones de diseño
@@ -105,6 +111,7 @@ Este repositorio es la **única versión oficial**. Cualquier asistente (Claude 
 - [x] v0.4: módulo de riego (calculadora, validador e importador de Excel/CSV), validado con el diseño agronómico del Lab de Riego
 - [x] v0.5: diseño mejorado (índice global, simulador, plan de acción, presión por mes, tema oscuro, edición en el cuestionario, respaldo en texto)
 - [x] Mapa satelital con contorno y área (Issue #10)
+- [x] Pestaña Plaguicidas: peligro para himenópteros por ingrediente activo y dosis, etiqueta, condiciones y cuadro SAG
 - [ ] Guardar los datos de riego con la finca (hoy se pierden al recargar la página)
 - [ ] Diseño hidráulico y cubicación de reservorio
 - [ ] Más cultivos en `src/riego/referencias.js` (hoy solo maíz)

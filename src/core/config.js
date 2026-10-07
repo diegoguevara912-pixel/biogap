@@ -98,6 +98,31 @@ export const CONFIG = {
     bordeLibre: 0.1, // aumento de profundidad para que no desborde (cubicación del Lab, R20)
   },
 
+  // Plaguicidas: peligro para himenópteros polinizadores y condiciones de aplicación. Fuente de cada valor al lado.
+  plag: {
+    // HQ = dosis (g i.a./ha) ÷ DL50 por contacto (µg/abeja). Umbral de la UE para adultos por contacto:
+    // 42 en aspersión hacia abajo y 85 hacia arriba o de lado (FAO, Pesticide Registration Toolkit).
+    umbralHQ: { abajo: 42, arriba: 85 },
+    // Clases de la EPA por DL50 de contacto (µg/abeja): ≤ 2 altamente tóxico; > 2 y < 11 tóxico; ≥ 11 relativamente
+    // no tóxico (EPA, citado por Pesticide Stewardship).
+    epa: { alta: 2, baja: 11 },
+    // Margen para abejas sin aguijón registradas en la finca: HQ × 10. Derivado de Arena y Sgolastra (2014): en ~95 %
+    // de los casos la sensibilidad relativa a Apis fue menor de 10. Es una derivación, no una norma.
+    factorSinAguijon: 10,
+    gusAlto: 2.8, // índice GUS > 2.8: lixiviación alta (Gustafson 1989; interpretación del PPDB)
+    copaMl: 25, bombaL: 18, barrilL: 200, // copa de 25 ml, bomba de mochila de 18 L y barril de 200 L (tabla SAG)
+    // Volumen de agua por hectárea según los días después del trasplante (clase: Correcta aplicación).
+    volumenClase: [{ ddt: 7, litros: 100 }, { ddt: 28, litros: 300 }, { ddt: 70, litros: 600 }],
+    horario: [[5, 9.5], [15.5, 18]], // horas de aplicación: 5:00-9:30 y 15:30-18:00 (clase: Correcta aplicación)
+    vientoMax: 10, // km/h (clase: Correcta aplicación)
+    temp: [15, 25], // °C (clase: Correcta aplicación)
+    hrMin: 50, // % de humedad relativa (clase: Correcta aplicación)
+    lluviaMinH: 4, // horas sin lluvia después de aplicar (clase: Correcta aplicación)
+    ph: [5.5, 6.5], // pH del agua de la mezcla (clase: Correcta aplicación; la tabla SAG dice 5-6)
+    phCobre: [6.5, 7], // pH para productos a base de cobre (tabla SAG)
+    toleranciaCopas: 0.15, // diferencia aceptada entre copas por bomba y dosis por barril de la tabla SAG (criterio propio)
+  },
+
   // Memoria de casos (k-NN). Criterio propio, por calibrar con casos reales (Etapa 3).
   casos: {
     k: 3, // fincas parecidas que se muestran

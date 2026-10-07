@@ -5,6 +5,7 @@
 import { emptyFarm, TPL, tiposPlantilla } from './state.js';
 import { CONFIG } from './config.js';
 import { MODULOS } from '../modules/index.js';
+import { normalizarPlag } from '../plag/modelo.js';
 
 export const FORMATO = 'biogap-finca';
 export const VERSION = 1;
@@ -46,7 +47,8 @@ export function normalizarFinca(o) {
       metodo: opcion(a.metodo, ['incorporado', 'voleo', 'fertirriego', 'foliar'], 'voleo'),
     }).slice(0, 60),
     fertMeses: meses(o.fertMeses), lluviaMeses: meses(o.lluviaMeses),
-    plaguicidas: lista(o.plaguicidas, (p) => p && { producto: txt(p.producto), clase: opcion(p.clase, ['amplio', 'selectivo', 'biologico'], 'amplio'), meses: meses(p.meses) }),
+    // Aplicaciones de plaguicidas (pestaña Plaguicidas). Un archivo viejo con { producto, clase, meses } se carga igual.
+    plaguicidas: lista(o.plaguicidas, normalizarPlag).slice(0, 200),
     sueloDesnudoMeses: meses(o.sueloDesnudoMeses),
     labranza: opcion(o.labranza, ['convencional', 'minima', 'cero'], v.labranza),
     plagas: lista(o.plagas, (p) => p && { nombre: txt(p.nombre), meses: meses(p.meses), severidad: opcion(p.severidad, ['baja', 'media', 'alta'], 'media') }),

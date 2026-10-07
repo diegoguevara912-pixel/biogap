@@ -9,6 +9,7 @@ import { viewSettings } from './ui/settings.js';
 import { viewRiego } from './ui/riego.js';
 import { viewCasos } from './ui/casos.js';
 import { viewFertilizacion } from './ui/fertilizacion.js';
+import { viewPlaguicidas } from './ui/plaguicidas.js';
 import { montarMapa, reiniciarMapa } from './ui/mapa.js';
 import { producto, UNIDADES } from './fert/catalogo.js';
 import { extraerFert, PLANTILLA_CSV } from './fert/extraer.js';
@@ -19,6 +20,9 @@ import { casoEjemplo, riegoVacio, declaradosEjemplo } from './riego/calculo.js';
 import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
 import { leerCsv } from './riego/csv.js';
 import { extraerRiego } from './riego/extraer.js';
+import { normalizarPlag, plagBorrador, componenteVacio } from './plag/modelo.js';
+import { desdeSag, alElegirIngrediente } from './plag/calculo.js';
+import { ingrediente } from './plag/catalogo.js';
 
 // Recupera lo último guardado en este navegador (finca, ajustes, plantillas, plan y tema).
 const previo = cargarLocal(S.tpl);
@@ -46,21 +50,28 @@ function render(){
   // Conserva el foco y el cursor del campo que se estaba editando.
   const ae=document.activeElement;const id=ae&&ae.id;let ss=null;try{ss=ae&&ae.selectionStart;}catch(e){}
   const app=document.getElementById('app');
-  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,fertilizacion:viewFertilizacion,casos:viewCasos,ajustes:viewSettings};
+  const views={dashboard:viewDashboard,wizard:viewWizard,plantillas:viewTemplates,riego:viewRiego,fertilizacion:viewFertilizacion,plaguicidas:viewPlaguicidas,casos:viewCasos,ajustes:viewSettings};
   app.innerHTML=(views[S.view]||viewDashboard)();
   S.msg='';
   document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.view===S.view?'page':'false'));
   montarMapa();applyTheme();guardarLocal(S);
   if(id){const el=document.getElementById(id);if(el&&el.tagName!=='BUTTON'){el.focus({preventScroll:true});try{if(ss!=null)el.setSelectionRange(ss,ss);}catch(e){}}}
 }
-const DRAFTS={cultivos:'draftCult',especies:'draftEsp',plaguicidas:'draftPlag',plagas:'draftPlaga'};
+const DRAFTS={cultivos:'draftCult',especies:'draftEsp',plagas:'draftPlaga'};
+// Pestaña Plaguicidas: el formulario edita una copia; la aplicación queda en la lista hasta guardar los cambios.
+const alFormPlag=()=>queueMicrotask(()=>document.getElementById('plag-form')?.scrollIntoView({block:'start'}));
+const limpiarPlag=()=>{S.draftPlag=plagBorrador();S.plagEdit=null;S.plagNotas=[];};
+const aBorrador=(x)=>{const d={...plagBorrador(),...structuredClone(x)};if(!d.componentes.length)d.componentes=[componenteVacio()];
+  d.grupoAuto=!d.grupo;d.usoAuto=!d.uso;return d;}; // lo ya guardado se respeta al cambiar de ingrediente
 document.addEventListener('click',e=>{
+  // Secciones plegables con data-keep: se recuerda lo que el usuario abrió o cerró (el navegador hace el cambio).
+  const su=e.target.closest('summary');if(su&&su.parentElement.dataset.keep){S.abiertos[su.parentElement.dataset.keep]=!su.parentElement.open;return;}
   const v=e.target.closest('[data-view]');if(v){S.view=v.dataset.view;render();window.scrollTo(0,0);return;}
   const st=e.target.closest('[data-step]');if(st){S.step=+st.dataset.step;render();return;}
   const sm=e.target.closest('[data-sim]');if(sm&&!sm.disabled){S.sim[sm.dataset.sim]=!S.sim[sm.dataset.sim];render();return;}
-  const mb=e.target.closest('[data-month]');if(mb){const[o,k]=getRef(mb.dataset.path);const i=+mb.dataset.month;o[k]=o[k].includes(i)?o[k].filter(x=>x!==i):uniq([...o[k],i]);render();return;}
+  const mb=e.target.closest('[data-month]');if(mb){S.plagMsg=null;const[o,k]=getRef(mb.dataset.path);const i=+mb.dataset.month;o[k]=o[k].includes(i)?o[k].filter(x=>x!==i):uniq([...o[k],i]);render();return;}
   const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act,f=S.farm;
-  S.ioMsg='';
+  S.ioMsg='';S.plagMsg=null;
   if(act==='theme'){S.theme={system:'light',light:'dark',dark:'system'}[S.theme];}
   else if(act==='next'){S.step=Math.min(STEPS.length-1,S.step+1);}
   else if(act==='prev'){S.step=Math.max(0,S.step-1);}
@@ -73,7 +84,20 @@ document.addEventListener('click',e=>{
   else if(act==='rm'){f[a.dataset.list].splice(+a.dataset.i,1);}
   else if(act==='edit'){const l=a.dataset.list,i=+a.dataset.i;S[DRAFTS[l]]=structuredClone(f[l][i]);f[l].splice(i,1);}
   else if(act==='add-esp'){if(!S.draftEsp.nombre.trim())return;f.especies.push({...S.draftEsp,floracion:[...S.draftEsp.floracion]});S.draftEsp=blankDrafts().draftEsp;}
-  else if(act==='add-plag'){if(!S.draftPlag.producto.trim())return;f.plaguicidas.push({...S.draftPlag,meses:[...S.draftPlag.meses]});S.draftPlag=blankDrafts().draftPlag;}
+  else if(act==='add-plag'){const d=S.draftPlag;
+    if(!d.producto.trim()){S.plagMsg={nivel:'error',texto:'Escribe el nombre del producto.'};document.getElementById('pq-prod')?.focus();}
+    else if(!d.meses.length){S.plagMsg={nivel:'error',texto:'Marca al menos un mes de aplicación.'};}
+    else{const x=normalizarPlag(d),ed=S.plagEdit!=null&&S.plagEdit<f.plaguicidas.length;
+      if(ed)f.plaguicidas[S.plagEdit]=x;else f.plaguicidas.push(x);
+      limpiarPlag();S.plagMsg={nivel:'ok',texto:ed?`Se guardaron los cambios de ${x.producto}.`:`Se agregó ${x.producto}. Ya aparece en la tabla de aplicaciones; puedes registrar otra.`};}}
+  else if(act==='plag-edit'){const i=+a.dataset.i;if(!f.plaguicidas[i])return;S.draftPlag=aBorrador(f.plaguicidas[i]);S.plagEdit=i;S.plagNotas=[];alFormPlag();}
+  else if(act==='plag-dup'){const i=+a.dataset.i;if(!f.plaguicidas[i])return;S.draftPlag={...aBorrador(f.plaguicidas[i]),meses:[]};S.plagEdit=null;S.plagNotas=[];
+    S.plagMsg={nivel:'ok',texto:`Copia de ${f.plaguicidas[i].producto||'la aplicación'} lista: marca los meses de la nueva aplicación y agrégala.`};alFormPlag();}
+  else if(act==='plag-cancel'){limpiarPlag();}
+  else if(act==='plag-rm'){const i=+a.dataset.i;f.plaguicidas.splice(i,1);if(S.plagEdit===i)limpiarPlag();else if(S.plagEdit!=null&&S.plagEdit>i)S.plagEdit--;}
+  else if(act==='plag-add-comp'){if(S.draftPlag.componentes.length<3)S.draftPlag.componentes.push(componenteVacio());}
+  else if(act==='plag-rm-comp'){S.draftPlag.componentes.splice(+a.dataset.i,1);if(!S.draftPlag.componentes.length)S.draftPlag.componentes.push(componenteVacio());}
+  else if(act==='plag-vol'){S.draftPlag.volumen=Number(a.dataset.v)||null;}
   else if(act==='add-plaga'){if(!S.draftPlaga.nombre.trim())return;f.plagas.push({...S.draftPlaga,meses:[...S.draftPlaga.meses]});S.draftPlaga=blankDrafts().draftPlaga;}
   else if(act==='add-cult'){if(!S.draftCult.nombre.trim())return;f.cultivos.push({...S.draftCult,ha:Number(S.draftCult.ha)||0,siembra:[...S.draftCult.siembra],cosecha:[...S.draftCult.cosecha]});S.draftCult=blankDrafts().draftCult;}
   else if(act==='add-nc'){if(!S.draftNC.criterio.trim())return;f.nc.push({criterio:S.draftNC.criterio,dias:Number(S.draftNC.dias)||0});S.draftNC=blankDrafts().draftNC;}
@@ -136,8 +160,20 @@ document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.bind
 document.addEventListener('change',e=>{const el=e.target;
   if(el.dataset&&el.dataset.done!==undefined){S.done[el.dataset.done]=el.checked;render();return;}
   if(!el.dataset||!el.dataset.bind)return;bindValue(el);
+  cambioPlag(el.dataset.bind,el.value);
   const vuelve=el.tagName==='SELECT'||'rerender' in el.dataset||['farm.area','farm.areaProd','farm.nAplicado','farm.nObjetivo'].includes(el.dataset.bind);
   if(vuelve)queueMicrotask(render);}); // diferido: el cambio puede llegar durante un blur
+// Pestaña Plaguicidas: lo que se llena solo al elegir un producto del cuadro SAG o un ingrediente del catálogo.
+function cambioPlag(bind,v){
+  if(bind==='draftPlag.sag'){const r=desdeSag(S.draftPlag,v===''?null:Number(v));S.draftPlag=r.borrador;S.plagNotas=r.notas;}
+  else if(bind==='draftPlag.enfermedad')S.draftPlag.enfermedad=v===''?null:Number(v);
+  else if(bind==='draftPlag.grupo')S.draftPlag.grupoAuto=!v.trim(); // escrito por el usuario: ya no se reemplaza
+  else if(bind==='draftPlag.uso')S.draftPlag.usoAuto=!v;
+  else if(/^draftPlag\.componentes\.\d+\.ia$/.test(bind)){
+    const c=S.draftPlag.componentes[+bind.split('.')[2]];
+    if(c&&ingrediente(c.ia)){c.nombre='';c.dl50=null;c.mayor=false;}
+    S.draftPlag=alElegirIngrediente(S.draftPlag);}
+}
 applyTheme();render();
 if(nube.activo&&S.nube.sesion)sesionLista().then(()=>render(),(err)=>{if(err.estado===401){borrarSesion();S.nube.sesion=null;render();}}); // renueva la sesión al abrir
 if(nube.activo)nubeAccion('nube-comunidad',true); // casos de la comunidad: lectura pública, sin sesión
