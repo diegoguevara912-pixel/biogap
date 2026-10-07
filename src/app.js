@@ -193,19 +193,20 @@ function importarFert(){
 // Importar datos de riego desde Excel (.xlsx) o CSV. Nada sale del navegador.
 const LIMITE_ARCHIVO=100*1024*1024;
 function importarRiego(){
-  const input=document.createElement('input');input.type='file';input.accept='.xlsx,.csv,.txt';
+  const input=document.createElement('input');input.type='file';input.accept='.xlsx,.xlsm,.csv,.txt';
   input.addEventListener('change',async()=>{
     const file=input.files&&input.files[0];if(!file)return;
     const nombre=file.name.toLowerCase();
     try{
       if(file.size>LIMITE_ARCHIVO)throw new ErrorLectura('El archivo pesa más de 100 MB.');
       let libro;
-      if(nombre.endsWith('.xlsx'))libro=await leerXlsx(await file.arrayBuffer());
+      if(nombre.endsWith('.xlsx')||nombre.endsWith('.xlsm'))libro=await leerXlsx(await file.arrayBuffer());
       else if(nombre.endsWith('.csv')||nombre.endsWith('.txt'))libro=leerCsv(await file.text(),file.name);
       else if(nombre.endsWith('.xls'))throw new ErrorLectura('Es un Excel antiguo (.xls): guárdalo como .xlsx o CSV y vuelve a cargarlo.');
-      else throw new ErrorLectura('Formato no reconocido: usa .xlsx o .csv.');
+      else throw new ErrorLectura('Formato no reconocido: usa .xlsx, .xlsm o .csv.');
       const x=extraerRiego(libro);
       const encontrados=Object.keys(x.origen).length;
+      if(!encontrados&&x.declarados.noRevisa?.length)throw new ErrorLectura(`el archivo trae ${x.declarados.noRevisa.join(' y ')}, y la app todavía no revisa esa parte. Solo revisa el diseño agronómico y el consumo del ciclo.`);
       if(!encontrados)throw new ErrorLectura('No se reconoció ningún dato de riego. Revisa que las etiquetas estén junto a sus valores, o escríbelos a mano.');
       S.riego={datos:x.datos,fuente:'archivo',archivo:file.name,origen:x.origen,declarados:x.declarados,faltan:x.faltan,omitidas:libro.omitidas||[]};
       S.view='riego';

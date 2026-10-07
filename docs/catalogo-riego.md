@@ -41,6 +41,17 @@ Todo parte de la demanda pico del cultivo: con 8.21 mm/día de ETc, cada sector 
 
 Con la sección más limitante, el intervalo máximo entre riegos es de **2 días**, no de los 6 que sugiere la hoja.
 
+## 2b. Consumo del ciclo (método de la clase)
+
+ETc de cada etapa = Kc promedio de la etapa × suma de la ETo de sus días. Kc promedio: inicial; (inicial + medio) / 2; medio; (medio + final) / 2. La ETo de cada día es la ETo media diaria del mes en que cae, según la fecha de siembra (calendario real, o meses de 30 días como en la clase). Volumen neto = ETc del ciclo × 10 × área; bruto = neto ÷ eficiencia. No descuenta lluvia efectiva.
+
+| Caso | ETc del ciclo | Comparación |
+| --- | --- | --- |
+| Ejercicio de ETc de la clase, maíz 3 ha, ETo 2017 ene–abr | 285.3 mm; 8 558 m³ netos | 286.8 mm resuelto a mano con el Kc final como promedio de la tabla (0.6125 en vez de 0.6) |
+| Lab de Riego, maíz 12.43 ha, siembra 1 ene 2024, ETo media mensual 2024 | 484.7 mm; 60 250 m³ netos, 66 944 brutos | 489.6 mm en la cubicación del reservorio, con ETo y Kc diarios (−1 %) |
+
+Sin fecha de siembra ni ETo mensual, la app usa la ETo pico todos los días y lo avisa (720.8 mm en el caso del Lab: sobreestima).
+
 ## 3. Rangos de referencia (FAO-56, maíz de grano)
 
 | Parámetro | Hoja | FAO-56 | Veredicto |
@@ -70,6 +81,12 @@ En la app, `min` y `max` de cada Kc son una **tolerancia propia** alrededor del 
 | Valores declarados | lo que el archivo trae calculado coincide con el recálculo (±2 %) | Error |
 | Lámina por metro | la LAA declarada coincide con el cálculo por metro y no con la zona radicular | Error |
 | Números a mano | una fórmula usa un número fijo igual a un dato, o un decimal largo sin origen | Revisar |
+| Área redondeada | una fórmula de área o volumen usa un entero cercano al área del lote, pero distinto (12 en vez de 12.43) | Revisar |
+| Cálculos a mano | una celda opera solo con números cortos escritos (áreas medidas, por ejemplo) | Criterio |
+| Volumen por ciclo | el volumen declarado coincide con el neto y no con el bruto, o no coincide con ninguno (±5 %) | Revisar |
+| ETo del ciclo | el ciclo se calculó con la ETo pico o faltan meses de ETo | Criterio |
+| ETo de diseño | la ETo de diseño es el MAX de la serie | Criterio |
+| Partes no revisadas | el archivo trae hidráulica o reservorio, que la app todavía no revisa | Criterio |
 | Datos completados | se usó un valor de referencia porque faltaba el dato | Criterio |
 
 ## 5. Hallazgos en la hoja original
@@ -78,7 +95,7 @@ En la app, `min` y `max` de cada Kc son una **tolerancia propia** alrededor del 
 | --- | --- | --- | --- |
 | 1 | Cultivo F20 | Altura de la planta = 250, rotulada en metros | Error de unidad |
 | 2 | Diseño E24 | Área por sector escrita a mano (`=12.43/E23`) | Valor fijo |
-| 3 | Diseño E26 | Volumen por ciclo sin origen (`=4896.45…×12`) | Valor sin fuente |
+| 3 | Diseño E26 | Volumen por ciclo pegado (`=4896.45…×12`): es la ETc del ciclo de la cubicación del reservorio (489.6 mm × 10), con 12 ha en vez de 12.43 y sin eficiencia | Valor copiado |
 | 4 | Lote I6 | Pendiente rotulada en %, calculada como fracción | Error de unidad |
 | 5 | Cultivo F15 | p = 0.55 sin ajustar por ETc | Ajuste omitido |
 | 6 | Diseño E5 | ETo de diseño = máximo diario del año | Criterio (conservador, válido) |
@@ -86,7 +103,7 @@ En la app, `min` y `max` de cada Kc son una **tolerancia propia** alrededor del 
 | 8 | Referencia | Bibliografía vacía | Fuente faltante |
 | 9 | Lote C24:F24 | LAA "zona radicular" sin multiplicar por la profundidad | Error de fórmula |
 
-La app detecta sola los hallazgos 1, 2, 3, 5, 7 y 9 al cargar el Excel.
+La app detecta sola los hallazgos 1, 2, 3, 5, 6, 7 y 9 al cargar el Excel.
 
 ## Fuentes
 
