@@ -21,7 +21,7 @@ import { leerXlsx, ErrorLectura } from './riego/xlsx.js';
 import { leerCsv } from './riego/csv.js';
 import { extraerRiego } from './riego/extraer.js';
 import { normalizarPlag, plagBorrador, componenteVacio } from './plag/modelo.js';
-import { desdeSag, alElegirIngrediente } from './plag/calculo.js';
+import { desdeSag, alElegirIngrediente, alElegirFormulacion } from './plag/calculo.js';
 import { ingrediente } from './plag/catalogo.js';
 
 // Recupera lo último guardado en este navegador (finca, ajustes, plantillas, plan y tema).
@@ -169,6 +169,8 @@ function cambioPlag(bind,v){
   else if(bind==='draftPlag.enfermedad')S.draftPlag.enfermedad=v===''?null:Number(v);
   else if(bind==='draftPlag.grupo')S.draftPlag.grupoAuto=!v.trim(); // escrito por el usuario: ya no se reemplaza
   else if(bind==='draftPlag.uso')S.draftPlag.usoAuto=!v;
+  else if(bind==='draftPlag.formulacion'){const r=alElegirFormulacion(S.draftPlag);if(r){S.draftPlag=r.borrador;S.plagNotas=r.notas;}}
+  else if(bind==='draftPlag.dosis'||bind==='draftPlag.dosisUnidad')S.draftPlag.dosisDeTabla=false; // la escribió el usuario
   else if(/^draftPlag\.componentes\.\d+\.ia$/.test(bind)){
     const c=S.draftPlag.componentes[+bind.split('.')[2]];
     if(c&&ingrediente(c.ia)){c.nombre='';c.dl50=null;c.mayor=false;}
