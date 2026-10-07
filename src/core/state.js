@@ -1,6 +1,7 @@
 // Estado de la app: finca de ejemplo, finca vacía y borradores de formularios.
 import { CONFIG } from './config.js';
 import { casoEjemplo, declaradosEjemplo } from '../riego/calculo.js';
+import { plagVacio, plagBorrador } from '../plag/modelo.js';
 
 // Resultado de un caso: cómo le fue a la finca después de sus acciones (memoria de casos).
 // ncAntes/ncDespues: n.º de no conformidades GLOBALG.A.P. antes y después.
@@ -30,9 +31,14 @@ export function demoFarm() {
       { mes: 5, producto: 'urea', n: 46, p: 0, k: 0, dosis: 100, metodo: 'voleo' },
       { mes: 6, producto: 'nitrato-amonio', n: 34, p: 0, k: 0, dosis: 127, metodo: 'voleo' },
     ],
+    // Aplicaciones de plaguicidas (ficticias). Las dosis son entradas de ejemplo, no recomendaciones.
     plaguicidas: [
-      { producto: 'Insecticida de amplio espectro', clase: 'amplio', meses: [1, 2] },
-      { producto: 'Fungicida selectivo', clase: 'selectivo', meses: [6, 7] },
+      { ...plagVacio(), producto: 'Insecticida de amplio espectro', clase: 'amplio', meses: [1, 2], uso: 'insecticida', registro: 'PQUA',
+        componentes: [{ ia: 'imidacloprid', nombre: '', conc: 350, dl50: null, mayor: false }], concUnidad: 'g', grupo: '4A', formulacion: 'SC',
+        dosis: 0.3, dosisUnidad: 'Lha', objetivo: 'Mosca blanca', monitoreo: true, hora: '07:00', viento: 6, temp: 24, hr: 70, ph: 6 },
+      { ...plagVacio(), producto: 'Fungicida selectivo', clase: 'selectivo', meses: [6, 7], uso: 'fungicida', registro: 'PQUA',
+        componentes: [{ ia: 'mancozeb', nombre: '', conc: 80, dl50: null, mayor: false }], concUnidad: 'pct', grupo: 'M3', formulacion: 'WP',
+        dosis: 1000, dosisUnidad: 'gBarril', volumen: 300 },
     ],
     sueloDesnudoMeses: [3, 4, 5], labranza: 'convencional',
     plagas: [{ nombre: 'Mosca blanca', meses: [1, 2, 3], severidad: 'alta' }],
@@ -53,7 +59,7 @@ export function emptyFarm() {
 
 export const blankDrafts = () => ({
   draftEsp: { nombre: '', tipo: 'Árbol', origen: 'nativa', floracion: [], atrae: false, riesgo: false, cantidad: null, copaD: null, copaH: null },
-  draftPlag: { producto: '', clase: 'amplio', meses: [] },
+  draftPlag: plagBorrador(),
   draftPlaga: { nombre: '', meses: [], severidad: 'media' },
   draftCult: { nombre: '', ha: 0, siembra: [], cosecha: [] },
   draftNC: { criterio: '', dias: 0 },
@@ -88,6 +94,10 @@ export const S = {
   nube: { sesion: null, comunidad: [], consentimiento: false, email: '', ocupado: false },
   fertImport: null, // último archivo de fertilización cargado: { archivo, hoja, omitidas, avisos }
   fertUnidad: 'kgha', // unidad de dosis en la pestaña Fertilización: kgha | qqmz // casos guardados por el usuario en este navegador (memoria de casos)
+  plagEdit: null, // índice de la aplicación de plaguicida que se está editando (null: agregando una nueva)
+  plagNotas: [], // notas al llenar el formulario desde el cuadro SAG
+  plagMsg: null, // mensaje junto al botón del formulario de plaguicidas: { nivel: 'ok' | 'error', texto }
+  abiertos: {}, // secciones plegables que el usuario abrió o cerró (se conservan al volver a dibujar la vista)
   // Módulo de riego: datos de entrada, de dónde salieron y lo que el archivo traía calculado.
   riego: { datos: casoEjemplo(), fuente: 'ejemplo', archivo: '', origen: {}, declarados: declaradosEjemplo(), faltan: [], omitidas: [] },
   ...blankDrafts(),

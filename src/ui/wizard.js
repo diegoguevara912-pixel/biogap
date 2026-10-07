@@ -44,6 +44,7 @@ export function viewWizard(){
     </div><p class="muted small">Con estas medidas la app estima el volumen de copa (Osorio 2025, Ec. 3), un indicador de cuántas flores puede ofrecer el árbol.</p>`:''}
     <div><button class="btn" data-act="add-esp">Agregar especie</button></div></div>`;
   const plan=f.fertPlan.length>0;
+  const plag=f.plaguicidas;
   if(s===3)body=`<h2>¿Qué prácticas agrícolas usas?</h2><div class="fields">
     ${select('p-riego','Sistema de riego','farm.riego',f.riego,[['gravedad','Gravedad'],['aspersion','Aspersión'],['goteo','Goteo'],['ninguno','Sin riego']])}
     ${select('p-lab','Labranza','farm.labranza',f.labranza,[['convencional','Convencional'],['minima','Mínima'],['cero','Cero labranza']])}
@@ -54,9 +55,9 @@ export function viewWizard(){
     :`<div class="f"><span class="label">Meses de fertilización</span>${months('farm.fertMeses',f.fertMeses)}</div>
   <p class="muted small">¿Quieres un análisis completo (N, P, K, método y efectos en suelo y agua)? <button class="btn sm" data-view="fertilizacion">Detallar en Fertilización</button></p>`}
   <h3>Plaguicidas</h3>
-  <div class="list">${f.plaguicidas.map((p,i)=>`<div class="item"><span class="grow"><b>${esc(p.producto)}</b> · ${{amplio:'Amplio espectro',selectivo:'Selectivo',biologico:'Biológico'}[p.clase]} · ${mlist(p.meses)}</span>${ed('plaguicidas',i)}</div>`).join('')||'<p class="muted">Sin plaguicidas registrados.</p>'}</div>
-  <div class="subform"><div class="fields">${field('q-prod','Producto','draftPlag.producto',S.draftPlag.producto)}${select('q-clase','Clase','draftPlag.clase',S.draftPlag.clase,[['amplio','Amplio espectro'],['selectivo','Selectivo'],['biologico','Biológico']])}</div>
-  <div class="f"><span class="label">Meses de aplicación</span>${months('draftPlag.meses',S.draftPlag.meses)}</div><div><button class="btn" data-act="add-plag">Agregar plaguicida</button></div></div>`;
+  <p class="notice"><span>${plag.length?`Tienes <b>${plag.length} aplicación(es)</b> registradas: ${plag.slice(0,4).map(p=>`${esc(p.producto||'Sin nombre')} (${mlist(p.meses)})`).join('; ')}${plag.length>4?` y ${plag.length-4} más`:''}.`
+    :'Los plaguicidas tienen su propia pestaña: ahí registras cada producto con su ingrediente activo, dosis y meses, y la app calcula el peligro para abejas y otros himenópteros polinizadores.'}</span>
+  <button class="btn sm" data-view="plaguicidas">${plag.length?'Ver plaguicidas':'Registrar plaguicidas'}</button></p>`;
   if(s===4)body=`<h2>Calendarios e historial</h2>
     <div class="f"><span class="label">Meses de lluvia fuerte</span>${months('farm.lluviaMeses',f.lluviaMeses)}</div>
     <div class="f"><span class="label">Meses con suelo desnudo</span>${months('farm.sueloDesnudoMeses',f.sueloDesnudoMeses)}</div>

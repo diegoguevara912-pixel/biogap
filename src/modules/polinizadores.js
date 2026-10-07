@@ -5,6 +5,7 @@
 import { M } from '../core/utils.js';
 import { variable, porCortes } from '../core/rubrica.js';
 import { FUENTES } from '../core/fuentes.js';
+import { puntajePeligro, fmtHQ } from '../plag/calculo.js';
 
 const K = FUENTES.kuniyoshi.corta, O = FUENTES.osorio.corta;
 // Volumen de copa (Osorio 2025, Ec. 3): V = 4/3 · π · (D/2)² · (H/2), con D = diámetro de copa y H = altura de copa.
@@ -15,12 +16,24 @@ export default {
   nombre: 'Polinizadores',
   ifa: '22 Biodiversidad · 31 MIP · 32 Fitosanitarios',
   evaluar(f, ctx, { cfg }) {
-    const R = cfg.rubrica.poli, C = cfg.categorias.clasePlaguicida;
+    const R = cfg.rubrica.poli;
     const { atraeFlor, riesgoFlor, ov1 } = ctx;
     const hayEspecies = f.especies.length > 0;
     const hayPlag = f.plaguicidas.length > 0;
-    const enFlor = f.plaguicidas.filter((p) => p.meses.some((m) => atraeFlor.includes(m)));
-    const peor = enFlor.reduce((a, p) => (C[p.clase] > C[a] ? p.clase : a), 'ninguno');
+    // Peligro del producto aplicado en floración: el HQ cuando hay ingrediente y dosis, la etiqueta si advierte
+    // por abejas y, sin esos datos, la clase que eligió el usuario (src/plag/calculo.js).
+    const enFlor = f.plaguicidas.filter((p) => p.meses.some((m) => atraeFlor.includes(m)))
+      .map((p) => ({ p, ...puntajePeligro(p, f, cfg) }));
+    const peor = enFlor.reduce((a, x) => (!a || x.puntaje > a.puntaje ? x : a), null);
+    const CLASE = { biologico: 'Biológico', selectivo: 'Selectivo', amplio: 'Amplio espectro' };
+    const peorTxt = !peor ? 'Ninguno'
+      : peor.por === 'etiqueta' ? `${peor.p.producto || 'Producto'}: la etiqueta advierte por abejas`
+        : peor.por === 'hq' ? `${peor.p.producto || 'Producto'}: HQ ${peor.r.cota ? 'de hasta ' : ''}${fmtHQ(peor.r.hqEf)} (umbral ${peor.r.umbral}${peor.r.factor > 1 ? `, ×${peor.r.factor} por abejas sin aguijón` : ''})`
+          : `${CLASE[peor.p.clase]} (sin ingrediente o dosis)`;
+    const peorEstado = peor && peor.por !== 'clase' ? 'verificado' : 'criterio propio';
+    const peorFuente = !peor ? '' : peor.por === 'hq'
+      ? 'HQ = dosis (g i.a./ha) ÷ DL50 por contacto (µg/abeja); umbral de la UE: 42 hacia abajo, 85 hacia arriba o de lado (FAO, Pesticide Registration Toolkit). DL50 del PPDB. El margen ×10 para abejas sin aguijón es una derivación de Arena y Sgolastra (2014).'
+      : peor.por === 'etiqueta' ? 'La etiqueta del producto trae el pictograma "tóxico para abejas" o "no aplicar en floración".' : 'Clase elegida por el usuario; registra el ingrediente y la dosis en Plaguicidas para calcular el HQ.';
     const fauna = f.especies.filter((e) => e.tipo === 'Fauna');
     const nativas = fauna.some((e) => e.origen === 'nativa');
 
@@ -44,9 +57,9 @@ export default {
         hayEspecies && hayPlag ? porCortes(ov1.length, R.coincidencia) : null,
         hayEspecies && hayPlag ? `${ov1.length} mes(es)${ov1.length ? `: ${ov1.map((m) => M[m]).join(', ')}` : ''}` : 'Sin dato',
         'criterio propio', `${K} cita la exposición a agroquímicos como factor no medido en la muerte de abejas.`),
-      variable('claseEnFloracion', 'Tipo de producto aplicado en floración', R.claseEnFloracion.peso,
-        hayEspecies && hayPlag ? C[peor] : null,
-        hayEspecies && hayPlag ? { ninguno: 'Ninguno', biologico: 'Biológico', selectivo: 'Selectivo', amplio: 'Amplio espectro' }[peor] : 'Sin dato'),
+      variable('claseEnFloracion', 'Peligro del producto aplicado en floración', R.claseEnFloracion.peso,
+        hayEspecies && hayPlag ? (peor ? peor.puntaje : 0) : null,
+        hayEspecies && hayPlag ? peorTxt : 'Sin dato', hayEspecies && hayPlag ? peorEstado : 'criterio propio', peorFuente),
       variable('especiesRiesgo', 'Meses de floración de especies de riesgo', R.especiesRiesgo.peso,
         hayEspecies ? porCortes(riesgoFlor.length, R.especiesRiesgo) : null, hayEspecies ? `${riesgoFlor.length} mes(es)` : 'Sin dato',
         'criterio propio', `${K}: en Zamorano la floración de Spathodea se concentró de septiembre a enero, con asincronía entre árboles.`),
