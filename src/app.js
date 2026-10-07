@@ -119,6 +119,8 @@ document.addEventListener('click',e=>{
   else if(act==='riego-blanco'){S.riego={datos:riegoVacio(),fuente:'manual',archivo:'',origen:{},declarados:{},faltan:[],omitidas:[]};}
   else if(act==='riego-add-suelo'){S.riego.datos.suelo.push({nombre:`Parte ${S.riego.datos.suelo.length+1}`,area:null,textura:'',da:null,cc:null,pmp:null,pedregosidad:null,infiltracion:null});}
   else if(act==='riego-rm-suelo'){S.riego.datos.suelo.splice(+a.dataset.i,1);}
+  else if(act==='riego-add-tramo'){const p=S.riego.datos.hidraulica.principal;p.push({nombre:String(p.length+1),caudal:null,largo:null,di:null,c:140});}
+  else if(act==='riego-rm-tramo'){S.riego.datos.hidraulica.principal.splice(+a.dataset.i,1);}
   else if(act==='paste'){
     const lines=S.tpl.paste.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);let ok=0,bad=0;
     lines.forEach(l=>{const c=l.split(/\t|;|,/).map(x=>x.trim());const val=Number((c[2]||'').replace(',','.'));if(c.length>=3&&!isNaN(val)){S.tpl.rows.push({fecha:c[0],lote:c[1],valor:val});ok++;}else bad++;});
@@ -206,7 +208,7 @@ function importarRiego(){
       else throw new ErrorLectura('Formato no reconocido: usa .xlsx, .xlsm o .csv.');
       const x=extraerRiego(libro);
       const encontrados=Object.keys(x.origen).length;
-      if(!encontrados&&x.declarados.noRevisa?.length)throw new ErrorLectura(`el archivo trae ${x.declarados.noRevisa.join(' y ')}, y la app todavía no revisa esa parte. Solo revisa el diseño agronómico y el consumo del ciclo.`);
+      if(!encontrados&&x.declarados.noRevisa?.length)throw new ErrorLectura(`el archivo trae ${x.declarados.noRevisa.join(' y ')}, y la app todavía no lee esas tablas del archivo. Copia los datos en las secciones Hidráulica y Reservorio de la pestaña Riego.`);
       if(!encontrados)throw new ErrorLectura('No se reconoció ningún dato de riego. Revisa que las etiquetas estén junto a sus valores, o escríbelos a mano.');
       S.riego={datos:x.datos,fuente:'archivo',archivo:file.name,origen:x.origen,declarados:x.declarados,faltan:x.faltan,omitidas:libro.omitidas||[]};
       S.view='riego';

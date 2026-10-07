@@ -7,6 +7,7 @@ import { validar } from '../src/riego/reglas.js';
 import { leerXlsx, ErrorLectura } from '../src/riego/xlsx.js';
 import { leerCsv } from '../src/riego/csv.js';
 import { extraerRiego } from '../src/riego/extraer.js';
+import { hazenWilliams, factorF, velocidad, largoMaximoLateral, calcularReservorio, calorLatente } from '../src/riego/hidraulica.js';
 
 const cerca = (a, b, tol = 0.01) => assert.ok(Math.abs(a - b) <= tol, `${a} ≠ ${b}`);
 const ids = (alertas, nivel) => alertas.filter((a) => !nivel || a.nivel === nivel).map((a) => a.id);
@@ -37,8 +38,8 @@ test('el caso de ejemplo dispara exactamente los hallazgos conocidos', () => {
   const r = calcular(casoEjemplo());
   const declarados = { laa: [99.792, 65.604, 49.5] };
   const a = validar(r, declarados);
-  assert.deepEqual(ids(a, 'error').sort(), ['altura', 'laa-metro']);
-  assert.deepEqual(ids(a, 'advertencia').sort(), ['horas', 'p']);
+  assert.deepEqual(ids(a, 'error').sort(), ['altura', 'laa-metro', 'lateral-largo']);
+  assert.deepEqual(ids(a, 'advertencia').sort(), ['horas', 'p', 'velocidad']);
   assert.ok(ids(a, 'ok').includes('escorrentia'));
   assert.ok(ids(a, 'criterio').includes('raiz'));
 });
@@ -188,4 +189,60 @@ test('distingue cálculos a mano, números pegados, área redondeada y partes no
   assert.equal(x.declarados.volumenCiclo, 58757.4);
   assert.equal(x.declarados.noRevisa.length, 1);
   assert.match(x.declarados.noRevisa[0], /hidráulica/);
+});
+
+// Hoja "Diseño Hidráulico Lab de riego 2025" (Anner Almendárez): valores de las celdas citadas.
+test('hidráulica: reproduce la hoja del Lab (lateral, secundaria, principal)', () => {
+  cerca(factorF(1), 1.00447, 1e-4);                                   // Lateral G18
+  cerca(hazenWilliams(347 * 1.2, 104.1, 16.1, 150, factorF(347)), 1.0161, 1e-3); // Lateral I364
+  assert.deepEqual(largoMaximoLateral(1.2, 0.3, 16.1, 150, 1.02), { emisores: 347, largo: 104.1 }); // Lateral F9
+  const r = calcular(casoEjemplo());
+  const h = r.hidraulica;
+  cerca(h.hfMax, 1.02);
+  cerca(h.lateral.hf, 2.2263, 1e-3);                                 // Lateral I474, el largo que toma la hoja CDT
+  cerca(h.secundaria.f, 0.35600, 1e-4);                              // hf en secundaria L37
+  cerca(h.secundaria.hf, 0.63934, 1e-3);                             // U37
+  cerca(h.secundaria.v, 1.62218, 1e-3);                              // T37
+  cerca(h.principal[0].hf, 4.1305, 1e-3);                            // hf en principales P34
+  cerca(velocidad(100767.54, 155.3), 1.4777, 1e-3);                  // J34
+  cerca(h.hfPrincipal, 10.085, 0.01);                                // sector 1: P34:P44
+  cerca(h.cdt, 10.2 + 2.2263 + 0.6393 + 10.0848, 0.01);
+  assert.deepEqual(h.faltan, ['Filtros', 'Accesorios', 'Desnivel']);
+});
+
+test('hidráulica: CDT completa da la potencia y el lateral corto pasa', () => {
+  const d = casoEjemplo();
+  Object.assign(d.hidraulica, { largoLateral: 100, filtros: 5, accesorios: 2, desnivel: 3, eficienciaBomba: 0.7 });
+  const r = calcular(d);
+  const a = validar(r);
+  assert.equal(a.find((x) => x.id === 'lateral-largo').nivel, 'ok');
+  assert.equal(a.find((x) => x.id === 'cdt').nivel, 'ok');
+  const q = 100.76754 / 3.6;
+  cerca(r.hidraulica.potenciaHp, q * r.hidraulica.cdt / (76 * 0.7), 1e-6);
+});
+
+// Cubicación del reservorio del Lab: ETc 489.645 mm, 12 ha, fuente 15 %, eficiencia 0.9, 110 × 110 m.
+test('reservorio: reproduce la cubicación del Lab', () => {
+  cerca(calorLatente(22), 2.449, 1e-3);                              // Cubicación E27
+  const diasPorMes = [31, 29, 31, 30, 4, 0, 0, 0, 0, 0, 0, 0];
+  const d = { areaLote: 12, eficiencia: 0.9, reservorio: casoEjemplo().reservorio };
+  const res = calcularReservorio(d, { etcCiclo: 489.645, diasPorMes });
+  cerca(res.laminaBrutaMm, 462.44, 0.01);                            // M7
+  cerca(res.demanda, 55493, 1);                                      // L11
+  // La hoja usa λ = 2.44 en marzo; con la fórmula de FAO-56 (2.4443) la evaporación sale 0.35 mm menos.
+  cerca(res.evaporacionMm, 758.41, 0.5);                             // F24
+  cerca(res.volumen, 64670, 10);                                     // M14
+  cerca(res.profundidad, 5.345, 0.01);                               // M25
+  cerca(res.profundidadTotal, 5.879, 0.01);                          // Q25
+});
+
+test('reservorio con talud necesita más profundidad y avisa si no cabe', () => {
+  const base = { areaLote: 12, eficiencia: 0.9, reservorio: { ...casoEjemplo().reservorio, talud: 1 } };
+  const ciclo = { etcCiclo: 489.645, diasPorMes: [31, 29, 31, 30, 4, 0, 0, 0, 0, 0, 0, 0] };
+  const res = calcularReservorio(base, ciclo);
+  assert.ok(res.profundidad > 5.345);
+  const h = res.profundidad, L = 110, z = 1;
+  cerca(h * (L * L - z * h * 2 * L + (4 / 3) * z * z * h * h), res.volumen, 1);
+  const chico = calcularReservorio({ ...base, reservorio: { ...base.reservorio, largo: 20, ancho: 20 } }, ciclo);
+  assert.ok(chico.noCabe);
 });

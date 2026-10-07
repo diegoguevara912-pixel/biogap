@@ -90,6 +90,14 @@ export const CONFIG = {
     toleranciaArea: 0.2, // aviso si el área dibujada difiere más de 20 % de la declarada (criterio propio)
   },
 
+  // Riego: hidráulica y reservorio. Fuente de cada valor al lado.
+  riego: {
+    hfMaxFraccion: 0.1, // pérdida máxima = 10 % de la presión de operación (hoja Lateral C11 del Lab de Riego, Zamorano)
+    velocidadMax: 1.5, // m/s en tuberías de PVC: criterio propio, valor común de diseño; la hoja del Lab usa 2 m/s para dimensionar principales
+    fraccionEvaporacion: 0.8, // fracción de la radiación que evapora agua del reservorio (cubicación del Lab, G30)
+    bordeLibre: 0.1, // aumento de profundidad para que no desborde (cubicación del Lab, R20)
+  },
+
   // Memoria de casos (k-NN). Criterio propio, por calibrar con casos reales (Etapa 3).
   casos: {
     k: 3, // fincas parecidas que se muestran

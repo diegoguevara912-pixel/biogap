@@ -28,6 +28,9 @@ const CAMPOS = [
   { clave: 'eto', nombre: 'ETo de diseño', si: [/^eto\b.*mm/, /evapotranspiracion de referencia/] },
   { clave: 'areaLote', nombre: 'Área del lote', si: [/^area (del )?lote/, /^area total/] },
   { clave: 'horasLaborales', nombre: 'Horas laborales', si: [/horas (laborales|de trabajo|disponibles)/] },
+  // Hidráulica: opcionales, no se listan como faltantes.
+  { clave: 'presionOperacion', nombre: 'Presión de operación', hidraulica: true, si: [/presion de operacion/] },
+  { clave: 'diLateral', nombre: 'Diámetro interno del lateral', hidraulica: true, si: [/^diametro interno/] },
   // Valores que el archivo trae ya calculados: se comparan contra el recálculo.
   { clave: 'etc', nombre: 'ETc declarada', declarado: true, si: [/^etc\b/] },
   { clave: 'pp', nombre: 'Precipitación horaria declarada', declarado: true, si: [/precipitacion (horaria|instantanea)/] },
@@ -91,6 +94,7 @@ export function extraerRiego(libro) {
       if (!val) continue;
       const valor = def.tipo === 'texto' ? val.v.trim() : val.v;
       if (def.declarado) declarados[def.clave] = valor;
+      else if (def.hidraulica) datos.hidraulica[def.clave] = valor;
       else if (def.clave.startsWith('etapa')) datos.etapas[Number(def.clave.slice(5))] = valor;
       else datos[def.clave] = valor;
       origen[def.clave] = { nombre: def.nombre, valor, celda: `${h.nombre.trim()}!${val.ref}`, etiqueta: c.v.trim() };
@@ -168,6 +172,6 @@ export function extraerRiego(libro) {
   const textos = [...hojas.map((h) => normalizar(h.nombre)), ...etiquetas.map((e) => e.texto)];
   declarados.noRevisa = NO_REVISA.filter((x) => textos.some((t) => x.si.test(t))).map((x) => x.parte);
 
-  const faltan = CAMPOS.filter((d) => !d.declarado && !origen[d.clave]).map((d) => d.nombre);
+  const faltan = CAMPOS.filter((d) => !d.declarado && !d.hidraulica && !origen[d.clave]).map((d) => d.nombre);
   return { datos, declarados, origen, faltan };
 }

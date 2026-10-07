@@ -2,6 +2,7 @@
 // Fórmulas documentadas en docs/catalogo-riego.md.
 
 import { buscarCultivo, buscarTextura } from './referencias.js';
+import { calcularHidraulica, calcularReservorio } from './hidraulica.js';
 
 // Datos de entrada vacíos. null = el usuario no lo dio (se usa la referencia si existe).
 export function riegoVacio() {
@@ -14,7 +15,24 @@ export function riegoVacio() {
     // Ciclo: fecha de siembra (AAAA-MM-DD) y ETo media diaria de cada mes (enero = 0).
     siembra: '', etoMensual: Array(12).fill(null), mes30: false,
     suelo: [],
+    hidraulica: hidraulicaVacia(),
+    reservorio: reservorioVacio(),
   };
+}
+
+// Sector más desfavorable: presiones en mca, diámetros internos en mm, caudales en m³/h, largos en m.
+export function hidraulicaVacia() {
+  return {
+    presionOperacion: null, diLateral: null, cLateral: 150, largoLateral: null,
+    secundaria: { caudal: null, largo: null, di: null, c: 140, salidas: null },
+    principal: [],
+    filtros: null, accesorios: null, desnivel: null, eficienciaBomba: null,
+  };
+}
+
+// Reservorio: radiación media diaria por mes en MJ/m²/día, temperatura media por mes en °C, medidas en m.
+export function reservorioVacio() {
+  return { aporteFuente: null, radiacion: Array(12).fill(null), temperatura: Array(12).fill(null), largo: null, ancho: null, talud: 0, bordeLibre: null };
 }
 
 // Caso de ejemplo: diseño agronómico del Lab de Riego, Zamorano (Anner Almendárez, 2025),
@@ -34,6 +52,23 @@ export function casoEjemplo() {
       { nombre: 'Parte 2', area: 4.88, textura: 'F', da: 1.42, cc: 22, pmp: 10, pedregosidad: 30, infiltracion: 10 },
       { nombre: 'Parte 3', area: 2.566, textura: 'FA', da: 1.5, cc: 14, pmp: 6, pedregosidad: 25, infiltracion: 20 },
     ],
+    // Sector 1 de la hoja "Diseño Hidráulico Lab de riego 2025": lateral de 137.1 m (el que toma la hoja CDT),
+    // secundaria 1 (PVC 4", Di 107.3 mm) y los tramos principales que llevan agua al sector (PVC 6", Di 155.3 mm).
+    // Filtros, accesorios y desnivel están vacíos en la hoja.
+    hidraulica: {
+      presionOperacion: 10.2, diLateral: 16.1, cLateral: 150, largoLateral: 137.1,
+      secundaria: { caudal: 52.80694, largo: 74.72, di: 107.3, c: 140, salidas: null },
+      principal: [['101', 314.47], ['102', 84.73], ['104', 136.77], ['106', 21.61], ['108', 128.41], ['110', 6.8], ['111', 75]]
+        .map(([nombre, largo]) => ({ nombre, caudal: 100.76754, largo, di: 155.3, c: 140 })),
+      filtros: null, accesorios: null, desnivel: null, eficienciaBomba: null,
+    },
+    // Cubicación del reservorio (mismo autor): fuente que cubre 15 %, radiación y temperatura de 2024, 110 × 110 m.
+    reservorio: {
+      aporteFuente: 0.15,
+      radiacion: [15.0751, 18.9097, 20.1569, 20.1339, 18.0983, null, null, null, null, null, null, null],
+      temperatura: [22, 23, 24, 25, 25, null, null, null, null, null, null, null],
+      largo: 110, ancho: 110, talud: 0, bordeLibre: 0.1,
+    },
   };
 }
 
@@ -107,12 +142,14 @@ export function calcularCiclo(d) {
   const [y, mo, dd] = m ? [+m[1], +m[2] - 1, +m[3]] : [0, 0, 1];
   const mesDelDia = (i) => (d.mes30 ? (mo + Math.floor((dd - 1 + i) / 30)) % 12 : new Date(Date.UTC(y, mo, dd + i)).getUTCMonth());
   const faltan = new Set();
+  const diasPorMes = Array(12).fill(0);
   let dia = 0;
   const etapas = d.etapas.map((dias, k) => {
     let etoSum = 0;
     const meses = new Set();
     for (let i = 0; i < dias; i++, dia++) {
       let eto = d.eto;
+      if (m) diasPorMes[mesDelDia(dia)]++;
       if (conMeses) {
         const mes = mesDelDia(dia);
         meses.add(mes);
@@ -123,7 +160,7 @@ export function calcularCiclo(d) {
     }
     return { nombre: ETAPAS[k], dias, kc: kcProm[k], etoSum, etc: kcProm[k] * etoSum, meses: [...meses].map((x) => MESES[x]) };
   });
-  const c = { etapas, fuenteEto: conMeses ? 'mensual' : 'pico', mesesSinEto: [...faltan].map((x) => MESES[x]) };
+  const c = { etapas, fuenteEto: conMeses ? 'mensual' : 'pico', mesesSinEto: [...faltan].map((x) => MESES[x]), diasPorMes, conFecha: !!m };
   // Un mes sin dato usa la ETo pico; si tampoco hay, el cálculo queda incompleto.
   if (c.mesesSinEto.length && !pos(d.eto)) c.incompleto = true;
   c.etcCiclo = etapas.reduce((a, e) => a + e.etc, 0);
@@ -192,6 +229,8 @@ export function calcular(entrada) {
     r.intervaloMax = Math.floor(r.laaLimitante / r.etc);
   }
   r.ciclo = calcularCiclo(d);
+  r.hidraulica = calcularHidraulica(d, r);
+  r.reservorio = calcularReservorio(d, r.ciclo);
   const infil = r.suelo.map((s) => s.infiltracion).filter((x) => pos(x));
   if (infil.length) r.infiltracionMin = Math.min(...infil);
   return r;

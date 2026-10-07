@@ -52,6 +52,38 @@ ETc de cada etapa = Kc promedio de la etapa × suma de la ETo de sus días. Kc p
 
 Sin fecha de siembra ni ETo mensual, la app usa la ETo pico todos los días y lo avisa (720.8 mm en el caso del Lab: sobreestima).
 
+## 2c. Hidráulica del sector más desfavorable
+
+Fórmulas de la hoja *Diseño Hidráulico Lab de riego 2025* (Anner Almendárez). Caudales en L/h, diámetros internos en mm.
+
+| Variable | Fórmula | Caso del Lab (sector 1) |
+| --- | --- | --- |
+| Pérdida (Hazen-Williams) | hf = 3163 × Q^1.852 × L / (C^1.852 × Di^4.871) × F | |
+| Factor de salidas múltiples (Christiansen) | F = 1/2.852 + 1/(2N) + √0.852 / (6N²) | |
+| Pérdida máxima | 10 % de la presión de operación | 1.02 m (Po 10.2 mca) |
+| Largo máximo del lateral | mayor N con hf ≤ hf máx; largo = N × dist. emisores | 104.1 m (347 emisores, Di 16.1 mm, C 150) |
+| Lateral de la hoja CDT | 137.1 m | hf 2.23 m: no cumple |
+| Secundaria 1 | 52.8 m³/h, 74.72 m, Di 107.3 mm, C 140, 93.4 salidas | hf 0.64 m, 1.62 m/s |
+| Principal del sector 1 | 7 tramos, 767.8 m, 100.8 m³/h, Di 155.3 mm | hf 10.08 m, 1.48 m/s |
+| CDT | Po + lateral + secundaria + principal + filtros + accesorios + desnivel | 23.2 m sin filtros, accesorios ni desnivel |
+| Potencia | Q (L/s) × CDT / (76 × eficiencia de la bomba) | sin dato de eficiencia |
+
+La velocidad máxima de 1.5 m/s es criterio propio (valor común para PVC); la hoja del Lab dimensiona las principales a 2 m/s.
+
+## 2d. Reservorio
+
+Fórmulas de la hoja *Cubicación de reservorio* (Anner Almendárez).
+
+| Variable | Fórmula | Caso del Lab |
+| --- | --- | --- |
+| Lámina bruta | ETc del ciclo × (1 − aporte de la fuente) / eficiencia | 489.6 × 0.85 / 0.9 = 462.4 mm |
+| Demanda | lámina bruta × 10 × área | 55 493 m³ (12 ha) |
+| Calor latente | λ = 2.501 − 0.002361 × T (FAO-56) | 2.449 MJ/kg a 22 °C |
+| Evaporación | Σ días del ciclo × radiación (MJ/m²/día) × 0.8 / λ | 758.4 mm = 9 177 m³ en 1.21 ha |
+| Profundidad | volumen / área (paredes verticales); con talud z se resuelve h·[L·W − z·h·(L+W) + 4/3·z²·h²] = volumen | 5.34 m; con 10 % de borde 5.88 m |
+
+No incluye infiltración del fondo ni volumen muerto.
+
 ## 3. Rangos de referencia (FAO-56, maíz de grano)
 
 | Parámetro | Hoja | FAO-56 | Veredicto |
