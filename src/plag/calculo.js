@@ -339,9 +339,9 @@ function dosisHa(s) {
 }
 
 // Copas por bomba contra dosis por barril de la tabla SAG (solo líquidos: una copa mide volumen).
-export function compararCopas(prod, cfg = CONFIG) {
+export function compararCopas(prod, cfg = CONFIG, formulacion = formulacionDe(prod.nombre)) {
   const P = cfg.plag;
-  const liq = esLiquida(formulacionDe(prod.nombre));
+  const liq = esLiquida(formulacion);
   const copas = fraccion(prod.copas);
   const barril = dosisBarril(prod.barril, liq);
   if (liq !== true || copas == null || !barril || barril.dosisUnidad !== 'mlBarril') return null;
@@ -360,32 +360,58 @@ export function componentesDe(texto) {
   }).filter((c) => c.ia);
 }
 
+// Dosis de un producto del cuadro SAG según la formulación: por hectárea, por barril o en copas (solo líquidos).
+// Un número por barril sin unidad solo se usa si se sabe la formulación (ml si es líquida, g si es polvo).
+function dosisSag(prod, formulacion) {
+  const liq = esLiquida(formulacion);
+  const dosis = dosisHa(prod.copas) ?? dosisBarril(prod.barril, liq);
+  if (!dosis && liq === true && fraccion(prod.copas) != null) return { dosis: fraccion(prod.copas), dosisUnidad: 'copas' };
+  return dosis;
+}
+
+// Notas para el usuario sobre lo que la tabla dice y lo que hay que confirmar con la etiqueta.
+function notasSag(prod, formulacion, dosis, cfg) {
+  const notas = [];
+  if (!dosis && !formulacion && (dosisSag(prod, 'SC') || dosisSag(prod, 'WP'))) {
+    const tabla = [prod.copas && `copas por bomba: ${prod.copas}`, prod.barril && `por barril: ${prod.barril}`].filter(Boolean).join('; ');
+    notas.push(`El nombre no dice la formulación y la tabla no da la unidad (${tabla}), así que no se sabe si son ml o g. Elige la formulación de la etiqueta y la dosis se llena sola.`);
+  } else if (!dosis) notas.push(`La tabla da la dosis como "${prod.copas || prod.barril || 'sin dato'}": escríbela con la etiqueta.`);
+  const cmp = compararCopas(prod, cfg, formulacion);
+  if (cmp) notas.push(`${fmt(cmp.copas, 2)} copa(s) por bomba equivalen a ${fmt(cmp.deCopas)} ml por barril; la tabla dice ${fmt(cmp.tabla)} ml (${cmp.dif >= 0 ? '+' : ''}${fmt(cmp.dif * 100, 0)} %)${cmp.cuadra ? '.' : ': las dos columnas no cuadran, usa la etiqueta.'}`);
+  if (componentesDe(prod.ia).some((c) => c.conc != null)) notas.push('La concentración sale del nombre en la tabla (%): confírmala con la etiqueta.');
+  if (prod.nota) notas.push(`Ojo con la tabla: ${prod.nota}`);
+  if (prod.reingreso === 'S') notas.push('Reingreso "S": así viene en la tabla y la leyenda no lo define. Usa las horas de la etiqueta.');
+  return notas;
+}
+
 // Llena el borrador con un producto del cuadro SAG. Devuelve el borrador y las notas para el usuario.
+// dosisDeTabla marca que la dosis vino de la tabla: sigue a la formulación hasta que el usuario la cambie.
 export function desdeSag(d, id, cfg = CONFIG) {
   const prod = productoSag(id);
   if (!prod) return { borrador: { ...d, sag: null }, notas: [] };
   const formulacion = formulacionDe(prod.nombre);
-  const liq = esLiquida(formulacion);
-  const notas = [];
   const componentes = componentesDe(prod.ia);
-  let dosis = dosisHa(prod.copas) ?? dosisBarril(prod.barril, liq);
-  if (!dosis && liq === true && fraccion(prod.copas) != null) dosis = { dosis: fraccion(prod.copas), dosisUnidad: 'copas' };
-  if (!dosis) notas.push(`La tabla da la dosis como "${prod.copas || prod.barril || 'sin dato'}": escríbela con la etiqueta.`);
-  const cmp = compararCopas(prod, cfg);
-  if (cmp) notas.push(`${fmt(cmp.copas, 2)} copa(s) por bomba equivalen a ${fmt(cmp.deCopas)} ml por barril; la tabla dice ${fmt(cmp.tabla)} ml (${cmp.dif >= 0 ? '+' : ''}${fmt(cmp.dif * 100, 0)} %)${cmp.cuadra ? '.' : ': las dos columnas no cuadran, usa la etiqueta.'}`);
-  if (componentes.length && componentes.some((c) => c.conc != null)) notas.push('La concentración sale del nombre en la tabla (%): confírmala con la etiqueta.');
-  if (prod.nota) notas.push(`Ojo con la tabla: ${prod.nota}`);
-  if (prod.reingreso === 'S') notas.push('Reingreso "S": así viene en la tabla y la leyenda no lo define. Usa las horas de la etiqueta.');
+  const dosis = dosisSag(prod, formulacion);
+  const notas = notasSag(prod, formulacion, dosis, cfg);
   const n = (s) => (/^\d+(\.\d+)?$/.test(String(s).trim()) ? Number(s) : null);
   const borrador = {
     ...d, sag: id, producto: prod.nombre, uso: 'fungicida', grupo: prod.frac === 'NC' ? '' : prod.frac, formulacion,
     grupoAuto: false, usoAuto: false, // el grupo y el uso vienen de la tabla
     componentes: componentes.length ? componentes : [componenteVacio()], concUnidad: 'pct',
-    ...(dosis ?? { dosis: null }),
+    ...(dosis ?? { dosis: null }), dosisDeTabla: Boolean(dosis),
     metodo: /al riego/i.test(prod.nombre) ? 'riego' : d.metodo,
     reingreso: n(prod.reingreso), diasCosecha: n(prod.cosecha),
   };
   return { borrador, notas };
+}
+
+// Al elegir la formulación de un producto del cuadro SAG, rehace la dosis de la tabla con la unidad que corresponde
+// (ml si es líquida, g si es polvo) y sus notas. No toca una dosis que escribió el usuario: entonces devuelve null.
+export function alElegirFormulacion(d, cfg = CONFIG) {
+  const prod = d.sag != null ? productoSag(d.sag) : null;
+  if (!prod || (d.dosis != null && !d.dosisDeTabla)) return null;
+  const dosis = dosisSag(prod, d.formulacion);
+  return { borrador: { ...d, ...(dosis ?? { dosis: null }), dosisDeTabla: Boolean(dosis) }, notas: notasSag(prod, d.formulacion, dosis, cfg) };
 }
 
 // Al elegir un ingrediente del catálogo, llena el grupo y el uso con los del catálogo, salvo que el usuario los haya

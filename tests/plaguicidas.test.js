@@ -11,6 +11,7 @@ import { PRODUCTOS_SAG, ENFERMEDADES, productoSag, eficacia } from '../src/plag/
 import {
   peligroAbejas, productoPorHa, claseEPA, cuentaParaAbejas, puntajePeligro, abejasSinAguijon, grupos, rotacion,
   revisarAplicacion, revisarFinca, resumenPlag, fraccion, compararCopas, componentesDe, desdeSag, alElegirIngrediente,
+  alElegirFormulacion,
 } from '../src/plag/calculo.js';
 
 const cerca = (a, b, tol = 0.05) => assert.ok(Math.abs(a - b) <= tol, `${a} no es ${b}`);
@@ -281,6 +282,31 @@ test('cuadro SAG: 132 productos, 41 enfermedades y eficacia de 1 a 5', () => {
   assert.equal(productoSag(122).copas, '1/2'); // Domark: Excel lo había vuelto "2-Jan"
   assert.equal(productoSag(123).barril, ''); // Mertec: "}"
   assert.ok(productoSag(33).nota); // Bolco: 240 h de reingreso, dudoso
+});
+
+test('cuadro SAG sin formulación en el nombre: al elegirla se llena la dosis', () => {
+  // "330" por barril sin unidad: puede ser ml o g. La app no lo adivina y pide la formulación.
+  const zampro = PRODUCTOS_SAG.find((p) => p.nombre === 'Zampro');
+  const { borrador: b, notas } = desdeSag(plagBorrador(), zampro.id);
+  assert.equal(b.formulacion, '');
+  assert.equal(b.dosis, null);
+  assert.ok(notas.some((n) => /Elige la formulación de la etiqueta/.test(n)));
+  // Líquida: 330 ml por barril, comparada con 1 1/3 copas por bomba.
+  const sc = alElegirFormulacion({ ...b, formulacion: 'SC' });
+  assert.equal(sc.borrador.dosis, 330);
+  assert.equal(sc.borrador.dosisUnidad, 'mlBarril');
+  assert.ok(sc.notas.some((n) => /copa\(s\) por bomba equivalen a 370\.4 ml/.test(n)));
+  assert.ok(!sc.notas.some((n) => /Elige la formulación/.test(n)));
+  // Si se corrige a polvo, la dosis de la tabla cambia de unidad; con "No sé" se vacía otra vez.
+  const wg = alElegirFormulacion({ ...sc.borrador, formulacion: 'WG' });
+  assert.equal(wg.borrador.dosis, 330);
+  assert.equal(wg.borrador.dosisUnidad, 'gBarril');
+  assert.equal(alElegirFormulacion({ ...wg.borrador, formulacion: '' }).borrador.dosis, null);
+  // Una dosis escrita por el usuario no se toca, y fuera del cuadro SAG no hace nada.
+  assert.equal(alElegirFormulacion({ ...sc.borrador, dosis: 300, dosisDeTabla: false, formulacion: 'WG' }), null);
+  assert.equal(alElegirFormulacion({ ...plagBorrador(), formulacion: 'SC' }), null);
+  // Con la formulación en el nombre, la dosis sale de una vez.
+  assert.equal(desdeSag(plagBorrador(), 5).borrador.dosisDeTabla, true);
 });
 
 test('llenar el formulario desde el cuadro SAG', () => {
