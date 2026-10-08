@@ -27,6 +27,7 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 9. **Riego por goteo**: calculadora y validador. El productor sube su Excel o CSV (o escribe sus datos), la app lee los valores por sus etiquetas, recalcula el diseño y revisa cada dato contra FAO-56. Ver [docs/catalogo-riego.md](docs/catalogo-riego.md).
 10. **Mapa satelital de la finca** (debajo del perfil de riesgo): ubicar la finca por coordenadas, tocando el mapa o con el GPS del dispositivo, y dibujar su contorno para calcular el área. Avisa si el punto cae fuera de Honduras o si el área dibujada difiere más de 20 % de la declarada. Imagen EOxCloudless (Sentinel-2, ~10 m): uso no comercial con atribución; un uso comercial necesita licencia de EOX.
 11. **Plaguicidas**: cada aplicación con producto, ingrediente activo, dosis y meses. Calcula el peligro para abejas y otros himenópteros polinizadores con el cociente de peligro de la FAO (HQ = g de i.a./ha ÷ DL50 por contacto; umbral 42 o 85), con un margen ×10 si la finca registra abejas sin aguijón. Revisa la etiqueta, las condiciones de aplicación, la eficacia contra la enfermedad (cuadro de fungicidas de la SAG, 132 productos) y la rotación por grupo, y lo cruza con la floración, la cosecha, el riego y la fertilización. Ver [docs/formulas.md](docs/formulas.md#plaguicidas-pestaña-plaguicidas).
+12. **Clima por ubicación** (Issue #8): con el punto de la finca, la app descarga de Open-Meteo (ERA5, CC BY 4.0) el clima de los últimos 10 años por mes y llena solos los meses de lluvia fuerte, la altitud, la ETo de riego y el clima del reservorio; también avisa en Plaguicidas con el clima típico de los meses de aplicación. Todo se puede corregir a mano. Ver [docs/formulas.md](docs/formulas.md#clima-por-ubicación-issue-8-crítica-3).
 
 **Datos y privacidad.** Por defecto, los datos de la finca se guardan solo en el navegador del usuario. La nube es **opcional** (pestaña Casos, panel «Nube y comunidad»):
 
@@ -34,6 +35,7 @@ Eso es la **memoria de casos**, y es el valor que crece con el uso. Desde la v0.
 - **Un caso anónimo** se comparte solo si marcas el consentimiento y pulsas *Compartir mi caso anónimo*: perfil por rasgos (0-1), riesgo por módulo, acciones y resultado. Nunca nombre, lugar, especies ni coordenadas. Puedes retirar todos tus casos cuando quieras.
 - Los casos compartidos los puede leer cualquiera, sin sesión y sin saber de quién son.
 - Sin conexión o sin sesión, la app funciona igual que antes. Detalles y decisiones en [docs/nube.md](docs/nube.md).
+- **El clima:** para descargarlo se envían a Open-Meteo las coordenadas redondeadas (~1 km). La finca guarda el clima por mes, no las coordenadas.
 - **El mapa satelital:** las coordenadas se guardan aparte, solo en este navegador, y **no** van en el archivo exportado, en la nube ni en la memoria de casos. El navegador sí descarga las imágenes del servicio de EOX según la zona que se mira.
 
 ## Cómo verla
@@ -112,6 +114,7 @@ Este repositorio es la **única versión oficial**. Cualquier asistente (Claude 
 - [x] v0.5: diseño mejorado (índice global, simulador, plan de acción, presión por mes, tema oscuro, edición en el cuestionario, respaldo en texto)
 - [x] Mapa satelital con contorno y área (Issue #10)
 - [x] Pestaña Plaguicidas: peligro para himenópteros por ingrediente activo y dosis, etiqueta, condiciones y cuadro SAG
+- [x] Clima por ubicación: Open-Meteo por coordenadas, con respaldo manual (Issue #8)
 - [ ] Guardar los datos de riego con la finca (hoy se pierden al recargar la página)
 - [ ] Diseño hidráulico y cubicación de reservorio
 - [ ] Más cultivos en `src/riego/referencias.js` (hoy solo maíz)

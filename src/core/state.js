@@ -45,6 +45,7 @@ export function demoFarm() {
     gg: 'si', minorAplicables: 60, minorFallas: 1,
     nc: [{ criterio: 'Registro de aplicaciones incompleto', dias: 9 }],
     acciones: [], resultado: resultadoVacio(),
+    clima: null, // ficticia: sin ubicación, sin clima
   };
 }
 
@@ -54,6 +55,8 @@ export function emptyFarm() {
     cultivos: [], especies: [], riego: 'ninguno', nAplicado: 0, nObjetivo: 0, pObjetivo: 0, kObjetivo: 0, fertPlan: [], fertMeses: [], lluviaMeses: [], plaguicidas: [], sueloDesnudoMeses: [],
     labranza: 'cero', plagas: [], gg: 'no', minorAplicables: 60, minorFallas: 0, nc: [],
     acciones: [], resultado: resultadoVacio(),
+    // Clima por mes de la ubicación (src/clima/normales.js). Sin coordenadas: esas viven solo en el navegador.
+    clima: null,
   };
 }
 
@@ -97,6 +100,7 @@ export const S = {
   plagEdit: null, // índice de la aplicación de plaguicida que se está editando (null: agregando una nueva)
   plagNotas: [], // notas al llenar el formulario desde el cuadro SAG
   plagMsg: null, // mensaje junto al botón del formulario de plaguicidas: { nivel: 'ok' | 'error', texto }
+  climaUI: { estado: '', msg: '', llenos: [] }, // descarga del clima: '' | cargando | ok | error, y qué se llenó solo
   abiertos: {}, // secciones plegables que el usuario abrió o cerró (se conservan al volver a dibujar la vista)
   // Módulo de riego: datos de entrada, de dónde salieron y lo que el archivo traía calculado.
   riego: { datos: casoEjemplo(), fuente: 'ejemplo', archivo: '', origen: {}, declarados: declaradosEjemplo(), faltan: [], omitidas: [] },

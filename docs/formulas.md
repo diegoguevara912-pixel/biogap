@@ -122,7 +122,27 @@ Cada aplicación guarda el producto y los meses (obligatorios) y, si el usuario 
 - Proyección Web Mercator con teselas de 256 px (esquema "slippy map" de OpenStreetMap).
 - Área del contorno sobre la esfera (Chamberlain y Duquette 2007, JPL Publication 07-03): A = |Σ (λᵢ₊₁ − λᵢ)·(2 + sen φᵢ + sen φᵢ₊₁)| · R² / 2, con R = 6 378 137 m. Probada contra la fórmula exacta de un rectángulo lat-lon.
 - Avisos (criterio propio): punto fuera del rectángulo aproximado de Honduras (y si con la longitud en negativo cae dentro, sugiere el signo menos); área dibujada vs. declarada con diferencia > 20 %.
-- El mapa **no** alimenta ninguna rúbrica todavía: ninguna variable cambia por el contorno. Usarlo (por ejemplo, para el clima del Issue #8 o la distancia real a fuentes de agua) necesita su propio fundamento.
+- El contorno **no** alimenta ninguna rúbrica todavía. El punto sí se usa para el clima (Issue #8, abajo).
+
+## Clima por ubicación (Issue #8, crítica 3)
+
+Con el punto de la finca (mapa, coordenadas o GPS) la app descarga el clima y el usuario ya no escribe temperatura, humedad, lluvia, viento, radiación ni ETo.
+
+- **Fuente:** API de clima histórico de Open-Meteo (`archive-api.open-meteo.com/v1/archive`), basada en los reanálisis ERA5 y ERA5-Land de Copernicus. Datos con licencia CC BY 4.0; la API es gratis para uso **no comercial**. La ETo es la FAO-56 Penman-Monteith que calcula Open-Meteo.
+- **Qué se calcula** (`src/clima/normales.js`): promedio de los últimos 10 años completos (2016-2025 en 2026) por mes: temperatura media, máxima y mínima, humedad relativa media, lluvia (mm/mes), viento, ETo media, radiación (MJ/m²/día) y el percentil 90 de la ETo diaria.
+  - Un mes de un año cuenta si tiene ≥ 80 % de días con dato; el promedio del mes necesita ≥ 5 años (criterio propio).
+  - Lluvia del mes = promedio diario × días del mes, para que un día faltante no la baje.
+  - Viento de 10 m a 2 m con FAO-56, ec. 47: u₂ = u_z · 4.87 / ln(67.8 z − 5.42) (factor 0.748 a 10 m).
+  - Si el servicio no reconoce las medias diarias, se piden la humedad y el viento por hora y se promedian por día; la temperatura media pasa a (máx + mín) / 2.
+- **Qué llena solo** (nunca pisa lo que el usuario escribió o lo que vino de su archivo):
+  - Meses de lluvia fuerte del cuestionario: meses con ≥ 100 mm (criterio propio, `CONFIG.clima.lluviaFuerteMm`). Si el usuario ya los marcó, la app solo sugiere.
+  - Altitud: elevación de la celda que devuelve Open-Meteo, si estaba vacía.
+  - Riego: ETo de cada mes, temperatura y radiación del reservorio, y ETo de diseño = mayor percentil 90 de la ETo diaria (criterio propio: un día exigente, no el promedio). El caso de ejemplo del Lab no se mezcla con el clima de otra ubicación salvo que el usuario lo pida.
+- **Dónde más se usa:**
+  - Plaguicidas: si no se anotaron las condiciones del día, avisa con el clima típico de los meses de aplicación contra los límites de la clase (máx. > 25 °C, HR < 50 %, viento > 10 km/h, mes lluvioso). Es nivel "criterio": un promedio diario no es la hora de aplicación.
+  - Polinizadores: variable "Clima en la floración de riesgo" con **peso 0** (no verificado). Kuniyoshi (2025) menciona temperatura, humedad y precipitación como factores no medidos; no suma al riesgo hasta que se mida su efecto.
+- **Límites:** es una celda de ~11 km, no una estación en la finca; en montaña puede diferir varios grados. Son 10 años, no una normal de 30 años de la OMM. Todo valor se puede corregir a mano (queda marcado), y sin internet se usa la última descarga o se escribe la tabla a mano.
+- **Privacidad:** se envían a Open-Meteo las coordenadas redondeadas a 2 decimales (~1 km). La finca guarda el clima por mes, no las coordenadas; la caché del punto vive solo en el navegador.
 
 ## Fuentes de los vínculos ecológicos
 

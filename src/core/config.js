@@ -31,6 +31,7 @@ export const CONFIG = {
       aguaSeca: { peso: 10, cortes: [0, 0.5] }, // fracción de meses de floración de riesgo sin lluvia
       foliarEnFloracion: { peso: 5 }, // aplicaciones foliares (fertilizantes) en floración visitada
       abejasNativas: { peso: 5 }, // receptor: abejas nativas registradas
+      climaFloracion: { peso: 0 }, // clima en la floración de riesgo: solo informa (hipótesis de Kuniyoshi 2025, no medida)
     },
     fert: {
       dosis: { peso: 30, cortes: [1, 1.2] }, // N aplicado / N objetivo
@@ -88,6 +89,23 @@ export const CONFIG = {
     // Rectángulo aproximado de Honduras continental e islas (criterio propio, solo para avisar).
     honduras: { latMin: 12.9, latMax: 17.5, lonMin: -89.4, lonMax: -83.1 },
     toleranciaArea: 0.2, // aviso si el área dibujada difiere más de 20 % de la declarada (criterio propio)
+  },
+
+  // Clima por ubicación (Issue #8, crítica 3): Open-Meteo, clima histórico (ERA5 / ERA5-Land de Copernicus).
+  // Datos con licencia CC BY 4.0; la API es gratis para uso no comercial (https://open-meteo.com/en/licence).
+  clima: {
+    url: 'https://archive-api.open-meteo.com/v1/archive',
+    atribucion: 'Weather data by Open-Meteo.com (CC BY 4.0), con datos de Copernicus Climate Change Service (ERA5)',
+    enlace: 'https://open-meteo.com/',
+    anios: 10, // años completos que se promedian (criterio propio; la normal de la OMM usa 30)
+    minDias: 0.8, // fracción de días con dato para usar un mes de un año (criterio propio)
+    minAnios: 5, // años válidos para dar el promedio de un mes (criterio propio)
+    lluviaFuerteMm: 100, // mes de "lluvia fuerte": 100 mm o más (criterio propio, por validar)
+    percentilEtoDiseno: 0.9, // ETo de diseño = percentil 90 de la ETo diaria del mes más exigente (criterio propio)
+    alturaViento: 10, // m: Open-Meteo da el viento a 10 m; se pasa a 2 m con FAO-56, ec. 47
+    decimalesCoord: 2, // coordenadas que se envían al servicio: 2 decimales (~1 km)
+    esperaMs: 30000, // tiempo máximo de espera de la descarga
+    cacheDias: 180, // días que se reutiliza una descarga del mismo punto
   },
 
   // Riego: hidráulica y reservorio. Fuente de cada valor al lado.
