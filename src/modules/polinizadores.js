@@ -6,6 +6,7 @@ import { M } from '../core/utils.js';
 import { variable, porCortes } from '../core/rubrica.js';
 import { FUENTES } from '../core/fuentes.js';
 import { puntajePeligro, fmtHQ } from '../plag/calculo.js';
+import { climaDeMeses } from '../clima/normales.js';
 
 const K = FUENTES.kuniyoshi.corta, O = FUENTES.osorio.corta;
 // Volumen de copa (Osorio 2025, Ec. 3): V = 4/3 · π · (D/2)² · (H/2), con D = diámetro de copa y H = altura de copa.
@@ -52,6 +53,9 @@ export default {
     // Aplicaciones foliares (p. ej. fertilizantes) en meses de floración visitada.
     const foliar = (f.fertPlan ?? []).filter((a) => a.metodo === 'foliar' && atraeFlor.includes(a.mes));
 
+    // Clima en los meses de floración de riesgo (ubicación de la finca). Solo informa: peso 0 hasta que se mida su efecto.
+    const cf = climaDeMeses(f.clima, riesgoFlor);
+    const n1 = (x, d = 1) => (x == null ? '—' : x.toLocaleString('es-HN', { maximumFractionDigits: d }));
     const variables = [
       variable('coincidencia', 'Aplicaciones en floración visitada', R.coincidencia.peso,
         hayEspecies && hayPlag ? porCortes(ov1.length, R.coincidencia) : null,
@@ -77,6 +81,9 @@ export default {
       { ...variable('foliarEnFloracion', 'Aplicaciones foliares en floración visitada', R.foliarEnFloracion.peso,
         foliar.length ? 100 : 0, foliar.length ? foliar.map((a) => M[a.mes]).join(', ') : 'Ninguna',
         'no verificado', `Vínculo Fertilización → Polinizadores. Hipótesis: ${K} cita la exposición a agroquímicos sin medirla.`), aplica: (f.fertPlan ?? []).length > 0 },
+      { ...variable('climaFloracion', 'Clima en la floración de riesgo (solo informa)', R.climaFloracion?.peso ?? 0, null,
+        cf ? `${riesgoFlor.map((m) => M[m]).join(', ')}: ${n1(cf.tmed)} °C (máx. ${n1(cf.tmax)}), humedad ${n1(cf.hr, 0)} %, lluvia ${n1(cf.lluvia, 0)} mm/mes` : 'Falta la ubicación de la finca',
+        'no verificado', `Hipótesis: ${K} menciona la temperatura, la humedad y la precipitación como factores que no midió. Clima típico de la ubicación (Open-Meteo, ERA5). No suma al riesgo hasta que se mida su efecto.`), aplica: riesgoFlor.length > 0 },
       variable('abejasNativas', 'Abejas nativas presentes (receptor)', R.abejasNativas.peso,
         fauna.length ? (nativas ? 100 : 50) : null,
         fauna.length ? (nativas ? 'Sí: hay más en juego' : 'No registradas') : 'Sin fauna registrada'),

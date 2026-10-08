@@ -12,6 +12,7 @@ import { ESTADOS } from '../core/rubrica.js';
 import { calcular } from '../riego/calculo.js';
 import { validar } from '../riego/reglas.js';
 import { panelMapa } from './mapa.js';
+import { panelClima } from './clima.js';
 
 // Hallazgos del módulo Riego, solo si el usuario cargó o escribió sus propios datos (no el caso de ejemplo).
 export function extraRiego(){
@@ -69,7 +70,7 @@ export function viewDashboard(){
     <p class="muted small">El índice promedia los módulos activos; cada módulo es una rúbrica de variables con peso y fuente. Pesos por calibrar: ${pesosTxt}.</p>
   </section>
   <div class="grid2">
-    <section class="panel"><div><h2>Perfil de riesgo ambiental</h2><p class="muted">Índice de 0 a 100 por módulo. Más lejos del centro, más riesgo.</p></div>${radar(mods)}${panelMapa()}</section>
+    <section class="panel"><div><h2>Perfil de riesgo ambiental</h2><p class="muted">Índice de 0 a 100 por módulo. Más lejos del centro, más riesgo.</p></div>${radar(mods)}${panelMapa()}${panelClima()}</section>
     <section class="panel"><h2>Riesgo por módulo</h2><div class="cards">
       ${mods.map(m=>`<article class="card">
         <div class="top"><h3>${m.nombre}</h3><span class="pill ${m.level}">${m.level}</span></div>

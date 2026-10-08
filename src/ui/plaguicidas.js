@@ -1,6 +1,7 @@
 // Vista: Plaguicidas. Cada aplicación con su producto, ingrediente activo, dosis y meses; la app calcula el peligro
 // para abejas y otros himenópteros polinizadores (HQ), revisa la etiqueta y las condiciones de aplicación, y lo cruza
 // con la floración, la cosecha, el riego y la fertilización de la finca.
+import { tieneClima, climaDeMeses } from '../clima/normales.js';
 import { esc, M, inter, uniq } from '../core/utils.js';
 import { S } from '../core/state.js';
 import { configEfectiva, normalizarAjustes } from '../core/storage.js';
@@ -79,6 +80,16 @@ function vistaPrevia(d, f, cfg) {
   return `<div class="notice" style="flex-direction:column;align-items:flex-start;gap:4px" aria-live="polite"><span class="label">Cálculo de esta aplicación</span>
     ${lineas.map((l) => `<span class="small">${l}</span>`).join('')}<span>${veredicto}</span>
     <span class="muted small">HQ = g de ingrediente activo por ha ÷ DL50 por contacto. Umbral de la UE: 42 hacia abajo, 85 hacia arriba o de lado (FAO).${r.factor > 1 ? ` Con abejas sin aguijón en la finca se multiplica por ${r.factor}.` : ''}</span></div>`;
+}
+
+// Clima típico de los meses elegidos en la ubicación de la finca (Issue #8): para planear la aplicación.
+function climaMeses(meses) {
+  const c = S.farm.clima;
+  if (!tieneClima(c)) return '<p class="muted small">Pon la ubicación de la finca (cuestionario, paso Finca) y aquí verás el clima típico de los meses de aplicación.</p>';
+  if (!meses.length) return '';
+  const x = climaDeMeses(c, meses);
+  const v = (k, u, d = 1) => (x[k] == null ? '—' : `${fmt(x[k], d)} ${u}`);
+  return `<p class="small"><b>Clima típico de ${mlist(meses)} en tu finca:</b> máxima ${v('tmax', '°C')}, mínima ${v('tmin', '°C')}, humedad ${v('hr', '%', 0)}, viento ${v('viento2', 'km/h')} a 2 m, lluvia ${v('lluvia', 'mm/mes', 0)}. Es el promedio de los últimos años: sirve para planear; el día de la aplicación, anota las condiciones reales.</p>`;
 }
 
 export function viewPlaguicidas() {
@@ -184,6 +195,7 @@ export function viewPlaguicidas() {
         </div>
         ${casilla('pq-mon', 'draftPlag.monitoreo', d.monitoreo, 'Un monitoreo mostró la plaga o la enfermedad antes de aplicar')}
       </div></details>
+    ${climaMeses(d.meses)}
     <details ${plegable('pq-condiciones', d.hora || d.viento != null || d.temp != null || d.hr != null || d.lluviaH != null || d.ph != null)}><summary>Condiciones el día de la aplicación</summary>
       <div class="subform" style="margin-top:8px">
         <div class="fields">
@@ -230,7 +242,7 @@ export function viewPlaguicidas() {
 
   <section class="panel flat">
     <div><h3>Fuentes</h3><p class="muted small">Ninguna dosis de esta pestaña es una recomendación: la que manda es la de la etiqueta del producto.</p></div>
-    <ul class="small" style="margin:0;padding-left:18px">${['fao', 'epa', 'arena', 'ppdb', 'gus', 'sag', 'etiquetas', 'aplicacion', 'muestreo'].map((k) => `<li>${fuenteTxt(FUENTES_PLAG[k])}</li>`).join('')}</ul>
+    <ul class="small" style="margin:0;padding-left:18px">${['fao', 'epa', 'arena', 'ppdb', 'gus', 'sag', 'etiquetas', 'aplicacion', 'muestreo', 'clima'].map((k) => `<li>${fuenteTxt(FUENTES_PLAG[k])}</li>`).join('')}</ul>
     <details><summary>Catálogo de ingredientes activos (${INGREDIENTES.length}), con su ficha del PPDB</summary>
       <div class="scroll"><table class="data small"><thead><tr><th>Ingrediente</th><th>Uso</th><th>Grupo</th><th class="num">DL50 contacto (µg/abeja)</th><th>Clase EPA</th><th class="num">GUS</th></tr></thead><tbody>
         ${[...INGREDIENTES].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((x) => `<tr><td><a href="${x.url}" target="_blank" rel="noopener">${esc(x.nombre)}</a></td><td>${x.uso}</td><td>${esc(x.grupo)}</td><td class="num">${x.mayor ? '> ' : ''}${fmt(x.dl50, 4)}</td><td>${esc(CLASE_EPA[claseEPA(x.dl50, x.mayor)] ?? 'Sin resolver')}</td><td class="num">${x.gus == null ? '—' : fmt(x.gus, 2)}</td></tr>`).join('')}

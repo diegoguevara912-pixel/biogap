@@ -11,6 +11,7 @@ import { M, inter, uniq } from '../core/utils.js';
 import { UNIDADES_DOSIS, esLiquida, plagBorrador, componenteVacio } from './modelo.js';
 import { ingrediente, buscarIngrediente, normalizar } from './catalogo.js';
 import { productoSag, eficacia, ENFERMEDADES, FUENTE_SAG } from './sag.js';
+import { tieneClima } from '../clima/normales.js';
 
 export const FUENTES_PLAG = {
   fao: { cita: 'FAO, Pesticide Registration Toolkit: riesgos para abejas (HQ y umbrales de 42 y 85).', url: 'https://www.fao.org/pesticide-registration-toolkit/registration-tools/registration-criteria/environmental-risks/risks-for-bees/en/' },
@@ -23,6 +24,7 @@ export const FUENTES_PLAG = {
   muestreo: { cita: 'Clase de Protección Vegetal, Zamorano: Monitoreo en cultivos hortícolas.', url: '' },
   sag: { cita: FUENTE_SAG, url: '' },
   propio: { cita: 'Criterio propio, por validar con un especialista.', url: '' },
+  clima: { cita: 'Clima típico de la ubicación: Open-Meteo, clima histórico (ERA5 / ERA5-Land), promedio de los últimos años; límites de la clase de Protección Vegetal: Correcta aplicación.', url: 'https://open-meteo.com/en/docs/historical-weather-api' },
 };
 
 const fmt = (x, d = 1) => (x == null || !Number.isFinite(x) ? '—' : x.toLocaleString('es-HN', { maximumFractionDigits: d }));
@@ -214,6 +216,9 @@ export function revisarAplicacion(a, f, cfg = CONFIG, ctx = {}) {
   if (a.temp != null && (a.temp < P.temp[0] || a.temp > P.temp[1])) out.push(aviso('advertencia', 'Temperatura fuera de rango', `${fmt(a.temp)} °C; la clase indica entre ${P.temp[0]} y ${P.temp[1]} °C.`, 'aplicacion'));
   if (a.hr != null && a.hr < P.hrMin) out.push(aviso('advertencia', 'Humedad relativa baja', `${fmt(a.hr, 0)} %; la clase indica más de ${P.hrMin} %.`, 'aplicacion'));
   if (a.lluviaH != null && a.lluviaH < P.lluviaMinH) out.push(aviso('advertencia', 'Lluvia muy pronto', `Llovió ${fmt(a.lluviaH)} h después de aplicar; la clase pide al menos ${P.lluviaMinH} h sin lluvia.`, 'aplicacion'));
+  // Sin condiciones del día: el clima típico de los meses de aplicación en la ubicación de la finca (Issue #8).
+  // Es un promedio diario, no la hora de aplicación: sirve para planear, no reemplaza medir el día.
+  if (a.viento == null && a.temp == null && a.hr == null) out.push(...avisosClimaTipico(a.meses, f.clima, cfg));
   if (a.ph != null) {
     const etiqueta = a.phMin != null && a.phMax != null && a.phMin <= a.phMax;
     const cobre = esCobre(a);
@@ -260,6 +265,25 @@ export function revisarAplicacion(a, f, cfg = CONFIG, ctx = {}) {
   if (foliar.length) out.push(aviso('criterio', 'Fertilización foliar en los mismos meses',
     `Si lo mezclas con el foliar de ${mesesTxt(foliar)}, haz antes una prueba en un envase pequeño y respeta el orden de mezcla: WP y WG primero, luego EC, SC y SL.`, 'aplicacion'));
   return out;
+}
+
+// Clima típico de los meses de aplicación contra los límites de la clase (temperatura, humedad, viento, lluvia).
+export function avisosClimaTipico(meses, clima, cfg = CONFIG) {
+  if (!tieneClima(clima) || !meses?.length) return [];
+  const P = cfg.plag, C = cfg.clima;
+  const de = (k, fn) => meses.filter((m) => clima.meses[m]?.[k] != null && fn(clima.meses[m][k]));
+  const val = (k, ms, red = Math.max) => fmt(red(...ms.map((m) => clima.meses[m][k])), k === 'hr' || k === 'lluvia' ? 0 : 1);
+  const partes = [];
+  const calor = de('tmax', (x) => x > P.temp[1]);
+  if (calor.length) partes.push(`en ${mesesTxt(calor)} la máxima típica llega a ${val('tmax', calor)} °C, sobre los ${P.temp[1]} °C de la clase: aplica temprano (5:00-9:30) o al final de la tarde (15:30-18:00)`);
+  const seco = de('hr', (x) => x < P.hrMin);
+  if (seco.length) partes.push(`en ${mesesTxt(seco)} la humedad media típica baja a ${val('hr', seco, Math.min)} %, bajo el ${P.hrMin} % de la clase: el producto se evapora y deriva más; aplica en las horas más húmedas`);
+  const viento = de('viento2', (x) => x > P.vientoMax);
+  if (viento.length) partes.push(`en ${mesesTxt(viento)} el viento medio típico es de ${val('viento2', viento)} km/h, sobre los ${P.vientoMax} km/h de la clase: busca las horas de calma`);
+  const lluvia = de('lluvia', (x) => x >= C.lluviaFuerteMm);
+  if (lluvia.length) partes.push(`${mesesTxt(lluvia)} ${lluvia.length > 1 ? 'son meses lluviosos' : 'es un mes lluvioso'} (${val('lluvia', lluvia)} mm): revisa el pronóstico, la clase pide ${P.lluviaMinH} h sin lluvia después de aplicar`);
+  if (!partes.length) return [aviso('ok', 'El clima típico de esos meses está dentro de lo que pide la clase', 'Temperatura máxima, humedad, viento y lluvia típicos de tu ubicación están en rango. Igual revisa las condiciones del día.', 'clima')];
+  return [aviso('criterio', 'Clima típico de los meses de aplicación', `${partes.join('; ')}. Es el promedio de tu ubicación: anota las condiciones del día en "Condiciones el día de la aplicación".`.replace(/^./, (x) => x.toUpperCase()), 'clima')];
 }
 
 // Avisos de la finca completa: rotación, agua para la mezcla y abejas sin aguijón.

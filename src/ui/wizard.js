@@ -3,6 +3,9 @@ import { esc, mlist } from '../core/utils.js';
 import { S } from '../core/state.js';
 import { months, field, select } from './components.js';
 import { conPlan } from '../fert/calculo.js';
+import { bloqueUbicacion } from './clima.js';
+import { mesesLluviosos, tieneClima } from '../clima/normales.js';
+import { CONFIG } from '../core/config.js';
 
 export const STEPS=['Finca','Cultivos','Especies','Prácticas','Calendarios','Certificación'];
 const numOpc=(id,label,bind,val,hint)=>`<div class="f"><label for="${id}">${label}</label><input id="${id}" type="number" min="0" step="any" data-nullable data-bind="${bind}" value="${val??''}"><span class="hint">${hint}</span></div>`;
@@ -19,7 +22,8 @@ export function viewWizard(){
     ${select('w-pend','Pendiente predominante','farm.pendiente',f.pendiente,[['plana','Plana'],['ondulada','Ondulada'],['fuerte','Fuerte']])}
     ${field('w-fuente','Fuente de agua principal','farm.fuenteAgua',f.fuenteAgua,'text','Pozo, quebrada, río, reservorio')}
     ${field('w-dist','Distancia al cuerpo de agua más cercano','farm.distAgua',f.distAgua,'number','Metros')}
-  </div>${f.areaProd>f.area&&f.area>0?'<p class="warnmsg">El área productiva no puede ser mayor que el área total.</p>':''}`;
+  </div>${f.areaProd>f.area&&f.area>0?'<p class="warnmsg">El área productiva no puede ser mayor que el área total.</p>':''}
+  ${bloqueUbicacion()}`;
   if(s===1)body=`<h2>¿Tienes cultivos?</h2>
     <div class="choice"><button data-act="cult-yes" aria-pressed="${f.tieneCultivos}">Sí, tengo cultivos</button><button data-act="cult-no" aria-pressed="${!f.tieneCultivos}">No, es con fines académicos</button></div>
     ${f.tieneCultivos?`<div class="list">${f.cultivos.map((c,i)=>`<div class="item"><span class="grow"><b>${esc(c.nombre)}</b> · ${c.ha} ha · siembra ${mlist(c.siembra)} · cosecha ${mlist(c.cosecha)}</span>${ed('cultivos',i)}</div>`).join('')||'<p class="muted">Aún no hay cultivos.</p>'}</div>
@@ -59,7 +63,8 @@ export function viewWizard(){
     :'Los plaguicidas tienen su propia pestaña: ahí registras cada producto con su ingrediente activo, dosis y meses, y la app calcula el peligro para abejas y otros himenópteros polinizadores.'}</span>
   <button class="btn sm" data-view="plaguicidas">${plag.length?'Ver plaguicidas':'Registrar plaguicidas'}</button></p>`;
   if(s===4)body=`<h2>Calendarios e historial</h2>
-    <div class="f"><span class="label">Meses de lluvia fuerte</span>${months('farm.lluviaMeses',f.lluviaMeses)}</div>
+    <div class="f"><span class="label">Meses de lluvia fuerte</span>${months('farm.lluviaMeses',f.lluviaMeses)}
+    ${tieneClima(f.clima)?(()=>{const sug=mesesLluviosos(f.clima);return sug.join()===f.lluviaMeses.join()?`<span class="hint">Coinciden con el clima de tu ubicación (${CONFIG.clima.lluviaFuerteMm} mm o más al mes).</span>`:`<span class="hint">Según el clima de tu ubicación: ${mlist(sug)} (${CONFIG.clima.lluviaFuerteMm} mm o más al mes). <button class="btn sm" data-clima="lluvia">Usar los del clima</button></span>`;})():'<span class="hint">Pon la ubicación en el paso Finca y la app los sugiere con el clima.</span>'}</div>
     <div class="f"><span class="label">Meses con suelo desnudo</span>${months('farm.sueloDesnudoMeses',f.sueloDesnudoMeses)}</div>
     <h3>Historial de plagas</h3>
     <div class="list">${f.plagas.map((p,i)=>`<div class="item"><span class="grow"><b>${esc(p.nombre)}</b> · severidad ${p.severidad} · ${mlist(p.meses)}</span>${ed('plagas',i)}</div>`).join('')||'<p class="muted">Sin plagas registradas.</p>'}</div>

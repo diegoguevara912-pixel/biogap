@@ -6,6 +6,7 @@ import { emptyFarm, TPL, tiposPlantilla } from './state.js';
 import { CONFIG } from './config.js';
 import { MODULOS } from '../modules/index.js';
 import { normalizarPlag } from '../plag/modelo.js';
+import { normalizarClima } from '../clima/normales.js';
 
 export const FORMATO = 'biogap-finca';
 export const VERSION = 1;
@@ -57,6 +58,7 @@ export function normalizarFinca(o) {
     nc: lista(o.nc, (n) => n && { criterio: txt(n.criterio), dias: num(n.dias) }),
     acciones: lista(o.acciones, (a) => typeof a === 'string' && a.trim() ? txt(a.trim()) : null).slice(0, 30),
     resultado: normalizarResultado(o.resultado),
+    clima: normalizarClima(o.clima),
   };
 }
 

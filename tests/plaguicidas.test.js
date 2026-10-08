@@ -97,7 +97,7 @@ test('caso 6: un archivo viejo { producto, clase, meses } se carga y da los mism
   const mod = (id) => r.mods.find((m) => m.id === id);
   const pts = (id) => Object.fromEntries(mod(id).variables.map((v) => [v.id, v.puntaje]));
   assert.equal(mod('poli').score, 89);
-  assert.deepEqual(pts('poli'), { coincidencia: 100, claseEnFloracion: 100, especiesRiesgo: 50, abundanciaRiesgo: 100, alternativas: 100, aguaSeca: 50, foliarEnFloracion: 0, abejasNativas: null });
+  assert.deepEqual(pts('poli'), { coincidencia: 100, claseEnFloracion: 100, especiesRiesgo: 50, abundanciaRiesgo: 100, alternativas: 100, aguaSeca: 50, foliarEnFloracion: 0, climaFloracion: null, abejasNativas: null }); // climaFloracion: peso 0, solo informa
   assert.equal(mod('troficas').score, 55);
   assert.deepEqual(pts('troficas'), { amplioEspectro: 50, amplioEnPlaga: 100, nativas: 50, aplicacionCosecha: 0 });
 });

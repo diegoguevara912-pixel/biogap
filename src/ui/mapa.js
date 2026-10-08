@@ -7,6 +7,7 @@ import { S } from '../core/state.js';
 import { CONFIG } from '../core/config.js';
 import { aPixel, aGrados, teselasVisibles, urlTesela, areaHa, leerCoordenadas, avisosMapa, redondear } from '../mapa/geo.js';
 import { cargarUbicacion, guardarUbicacion, borrarUbicacion, ubicacionVacia } from '../mapa/ubicacion.js';
+import { pedirClima } from './clima.js';
 
 const C = CONFIG.mapa;
 let U = cargarUbicacion();
@@ -15,7 +16,7 @@ let msg = '';
 let fallas = 0;
 
 // Al empezar otra finca o borrar los datos, la ubicación anterior se borra también.
-export function reiniciarMapa() { borrarUbicacion(); U = ubicacionVacia(); modo = 'ver'; msg = ''; }
+export function reiniciarMapa() { borrarUbicacion(); U = ubicacionVacia(); modo = 'ver'; msg = ''; S.climaUI = { estado: '', msg: '', llenos: [] }; }
 
 const fmt = (x) => x.toFixed(5);
 
@@ -116,7 +117,7 @@ function tocar(el, ox, oy) {
   const g = aGrados(c.x + ox - el.clientWidth / 2, c.y + oy - el.clientHeight / 2, zoom);
   const p = [+g.lat.toFixed(6), +g.lon.toFixed(6)];
   msg = '';
-  if (modo === 'punto') { U.punto = p; modo = 'ver'; rerender(); }
+  if (modo === 'punto') { U.punto = p; modo = 'ver'; guardar(); rerender(); pedirClima(p[0], p[1]); }
   else { U.contorno.push(p); dibujar(el); actualizarInfo(); }
   guardar();
 }
@@ -196,18 +197,30 @@ document.addEventListener('click', (e) => {
   else if (a === 'ir') {
     const r = leerCoordenadas(document.getElementById('mapa-coord')?.value);
     if (r.error) msg = r.error;
-    else { U.punto = [r.lat, r.lon]; U.vista = { lat: r.lat, lon: r.lon, zoom: 15 }; }
+    else { U.punto = [r.lat, r.lon]; U.vista = { lat: r.lat, lon: r.lon, zoom: 15 }; guardar(); pedirClima(r.lat, r.lon); }
   } else if (a === 'gps') {
     if (!navigator.geolocation) { msg = 'Este navegador no permite obtener la ubicación.'; }
     else {
       msg = 'Buscando tu ubicación…';
       navigator.geolocation.getCurrentPosition(
-        (p) => { msg = `Ubicación del dispositivo (precisión ±${Math.round(p.coords.accuracy)} m).`; U.punto = [+p.coords.latitude.toFixed(6), +p.coords.longitude.toFixed(6)]; U.vista = { lat: U.punto[0], lon: U.punto[1], zoom: 15 }; guardar(); rerender(); },
-        () => { msg = 'No se pudo obtener la ubicación (permiso denegado o sin señal).'; rerender(); },
+        (p) => { msg = `Ubicación del dispositivo (precisión ±${Math.round(p.coords.accuracy)} m).`; U.punto = [+p.coords.latitude.toFixed(6), +p.coords.longitude.toFixed(6)]; U.vista = { lat: U.punto[0], lon: U.punto[1], zoom: 15 }; guardar(); rerender(); pedirClima(U.punto[0], U.punto[1]); },
+        () => { msg = 'No se pudo obtener la ubicación (permiso denegado o sin señal).'; rerender(); avisarFuera(); },
         { enableHighAccuracy: true, timeout: 15000 });
     }
   }
   guardar();
   rerender();
+  avisarFuera();
   if (a === 'ir' && el) document.getElementById('mapa-finca')?.focus({ preventScroll: true });
 });
+
+// Fuera del dashboard (p. ej. el paso Finca del cuestionario) no hay bloque del mapa: el mensaje se muestra
+// en el estado del clima. Solo los errores y la espera del GPS; el éxito lo informa la descarga del clima.
+function avisarFuera() {
+  if (document.querySelector('.mapa-bloque')) return;
+  const errores = ['Escribe', 'La latitud', 'La longitud', 'No se pudo', 'Este navegador'];
+  if (msg.startsWith('Buscando')) S.climaUI = { estado: 'cargando', msg, llenos: [] };
+  else if (errores.some((x) => msg.startsWith(x))) S.climaUI = { estado: 'error', msg, llenos: [] };
+  document.dispatchEvent(new Event('biogap:render'));
+}
+

@@ -5,6 +5,8 @@ import { S } from '../core/state.js';
 import { calcular, NOMBRES_MES, hidraulicaVacia, reservorioVacio } from '../riego/calculo.js';
 import { CONFIG } from '../core/config.js';
 import { validar } from '../riego/reglas.js';
+import { tieneClima } from '../clima/normales.js';
+import { estadoClima } from './clima.js';
 
 const NIVEL = { error: 'Error', advertencia: 'Revisar', criterio: 'Criterio', ok: 'Bien' };
 const fmt = (x, d = 1) => (typeof x === 'number' && Number.isFinite(x) ? x.toLocaleString('es-HN', { maximumFractionDigits: d }) : '—');
@@ -30,6 +32,11 @@ export function viewRiego() {
   const o = R.origen || {};
   const ref = r.referencia;
   const cuenta = (n) => alertas.filter((a) => a.nivel === n).length;
+  // Clima de la ubicación (Issue #8): llena la ETo de cada mes, la ETo de diseño y el clima del reservorio.
+  const clima = S.farm.clima;
+  const lineaClima = tieneClima(clima)
+    ? `<p class="small"><b>Clima de tu ubicación:</b> ${R.fuente === 'ejemplo' ? 'el caso de ejemplo usa los datos de su propia finca; pulsa el botón para usar los tuyos.' : 'llena solo los meses vacíos.'} <button class="btn sm" data-clima="riego">Llenar con el clima de mi finca</button></p>${estadoClima()}`
+    : '<p class="muted small">¿No tienes la ETo, la temperatura o la radiación? Pon la ubicación de la finca (cuestionario, paso Finca, o el mapa del dashboard) y se llenan solas con el clima de los últimos años.</p>';
 
   const aviso = R.fuente === 'ejemplo'
     ? `<b>Caso real de ejemplo.</b> Diseño agronómico de maíz del Lab de Riego, Zamorano (Anner Almendárez, 2025), publicado con autorización del autor.`
@@ -93,7 +100,7 @@ export function viewRiego() {
       </div>
       <h3>Operación</h3>
       <div class="fields">
-        ${campo('rg-eto', 'ETo de diseño', 'riego.datos.eto', d.eto, 'mm/día', o.eto)}
+        ${campo('rg-eto', 'ETo de diseño', 'riego.datos.eto', d.eto, tieneClima(clima) ? `mm/día · el clima da ${Math.max(...clima.meses.map((m) => m.etoP90 ?? 0)) || '—'} (día exigente, percentil 90)` : 'mm/día', o.eto)}
         ${campo('rg-ef', 'Eficiencia de riego', 'riego.datos.eficiencia', d.eficiencia, 'fracción', o.eficiencia)}
         ${campo('rg-area', 'Área del lote', 'riego.datos.areaLote', d.areaLote, 'ha', o.areaLote)}
         ${campo('rg-horas', 'Horas laborales', 'riego.datos.horasLaborales', d.horasLaborales, 'h/día', o.horasLaborales)}
@@ -134,6 +141,7 @@ export function viewRiego() {
 
   <section class="panel">
     <div><h2>Consumo del ciclo</h2><p class="muted">ETc de cada etapa = Kc promedio de la etapa × suma de la ETo de sus días. Ingresa la fecha de siembra y la ETo media diaria de cada mes; los meses vacíos usan la ETo pico.</p></div>
+    ${lineaClima}
     <div class="fields">
       <div class="f"><label for="rg-siembra">Fecha de siembra</label><input id="rg-siembra" type="date" data-bind="riego.datos.siembra" data-rerender value="${esc(d.siembra)}"></div>
       <div class="f"><label class="check"><input type="checkbox" style="width:auto" data-bind="riego.datos.mes30" data-rerender ${d.mes30 ? 'checked' : ''}> Meses de 30 días (como en la clase)</label></div>
@@ -202,6 +210,7 @@ export function viewRiego() {
 
   <section class="panel">
     <div><h2>Reservorio</h2><p class="muted">Volumen = demanda del ciclo (ETc × (1 − aporte de la fuente) ÷ eficiencia × 10 × área) + evaporación del espejo. Evaporación diaria (mm) = radiación (MJ/m²/día) × ${CONFIG.riego.fraccionEvaporacion} ÷ calor latente (2.501 − 0.002361 × temperatura), en los días del ciclo. Necesita la fecha de siembra de "Consumo del ciclo".</p></div>
+    ${tieneClima(clima) ? '' : lineaClima}
     <div class="fields">
       ${campo('rg-ap', 'Aporte de la fuente', 'riego.datos.reservorio.aporteFuente', rv.aporteFuente, 'fracción de la ETc (0 si no aporta)')}
       ${campo('rg-rl', 'Largo del reservorio', 'riego.datos.reservorio.largo', rv.largo, 'm, en el borde')}

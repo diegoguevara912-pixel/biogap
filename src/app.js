@@ -11,6 +11,8 @@ import { viewCasos } from './ui/casos.js';
 import { viewFertilizacion } from './ui/fertilizacion.js';
 import { viewPlaguicidas } from './ui/plaguicidas.js';
 import { montarMapa, reiniciarMapa } from './ui/mapa.js';
+import { marcarManual } from './ui/clima.js';
+import { llenarRiego } from './clima/normales.js';
 import { producto, UNIDADES } from './fert/catalogo.js';
 import { extraerFert, PLANTILLA_CSV } from './fert/extraer.js';
 import { nombreCultivoPrincipal } from './casos/perfil.js';
@@ -66,7 +68,7 @@ const aBorrador=(x)=>{const d={...plagBorrador(),...structuredClone(x)};if(!d.co
 document.addEventListener('click',e=>{
   // Secciones plegables con data-keep: se recuerda lo que el usuario abrió o cerró (el navegador hace el cambio).
   const su=e.target.closest('summary');if(su&&su.parentElement.dataset.keep){S.abiertos[su.parentElement.dataset.keep]=!su.parentElement.open;return;}
-  const v=e.target.closest('[data-view]');if(v){S.view=v.dataset.view;render();window.scrollTo(0,0);return;}
+  const v=e.target.closest('[data-view]');if(v){if(S.climaUI.estado==='ok')S.climaUI={estado:'',msg:'',llenos:[]};S.view=v.dataset.view;render();window.scrollTo(0,0);return;}
   const st=e.target.closest('[data-step]');if(st){S.step=+st.dataset.step;render();return;}
   const sm=e.target.closest('[data-sim]');if(sm&&!sm.disabled){S.sim[sm.dataset.sim]=!S.sim[sm.dataset.sim];render();return;}
   const mb=e.target.closest('[data-month]');if(mb){S.plagMsg=null;const[o,k]=getRef(mb.dataset.path);const i=+mb.dataset.month;o[k]=o[k].includes(i)?o[k].filter(x=>x!==i):uniq([...o[k],i]);render();return;}
@@ -140,7 +142,7 @@ document.addEventListener('click',e=>{
   else if(act==='caso-rm'){S.casos=S.casos.filter(c=>c.id!==a.dataset.id);guardarCasos(S.casos);S.msg='Caso quitado de la memoria.';}
   else if(act==='riego-import'){importarRiego();return;}
   else if(act==='riego-ejemplo'){S.riego={datos:casoEjemplo(),fuente:'ejemplo',archivo:'',origen:{},declarados:declaradosEjemplo(),faltan:[],omitidas:[]};}
-  else if(act==='riego-blanco'){S.riego={datos:riegoVacio(),fuente:'manual',archivo:'',origen:{},declarados:{},faltan:[],omitidas:[]};}
+  else if(act==='riego-blanco'){S.riego={datos:riegoVacio(),fuente:'manual',archivo:'',origen:{},declarados:{},faltan:[],omitidas:[]};climaARiego();}
   else if(act==='riego-add-suelo'){S.riego.datos.suelo.push({nombre:`Parte ${S.riego.datos.suelo.length+1}`,area:null,textura:'',da:null,cc:null,pmp:null,pedregosidad:null,infiltracion:null});}
   else if(act==='riego-rm-suelo'){S.riego.datos.suelo.splice(+a.dataset.i,1);}
   else if(act==='riego-add-tramo'){const p=S.riego.datos.hidraulica.principal;p.push({nombre:String(p.length+1),caudal:null,largo:null,di:null,c:140});}
@@ -160,7 +162,7 @@ document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.bind
 document.addEventListener('change',e=>{const el=e.target;
   if(el.dataset&&el.dataset.done!==undefined){S.done[el.dataset.done]=el.checked;render();return;}
   if(!el.dataset||!el.dataset.bind)return;bindValue(el);
-  cambioPlag(el.dataset.bind,el.value);
+  cambioPlag(el.dataset.bind,el.value);marcarManual(el.dataset.bind);
   const vuelve=el.tagName==='SELECT'||'rerender' in el.dataset||['farm.area','farm.areaProd','farm.nAplicado','farm.nObjetivo'].includes(el.dataset.bind);
   if(vuelve)queueMicrotask(render);}); // diferido: el cambio puede llegar durante un blur
 // Pestaña Plaguicidas: lo que se llena solo al elegir un producto del cuadro SAG o un ingrediente del catálogo.
@@ -176,6 +178,10 @@ function cambioPlag(bind,v){
     if(c&&ingrediente(c.ia)){c.nombre='';c.dl50=null;c.mayor=false;}
     S.draftPlag=alElegirIngrediente(S.draftPlag);}
 }
+// Riego nuevo o leído de un archivo: lo que quedó vacío se llena con el clima de la ubicación (Issue #8).
+function climaARiego(){const ll=llenarRiego(S.riego.datos,S.farm.clima);S.climaUI=ll.length?{estado:'ok',msg:'Se usó el clima de tu ubicación.',llenos:ll}:{estado:'',msg:'',llenos:[]};}
+// La descarga del clima y el mapa piden volver a dibujar cuando terminan.
+document.addEventListener('biogap:render',()=>render());
 applyTheme();render();
 if(nube.activo&&S.nube.sesion)sesionLista().then(()=>render(),(err)=>{if(err.estado===401){borrarSesion();S.nube.sesion=null;render();}}); // renueva la sesión al abrir
 if(nube.activo)nubeAccion('nube-comunidad',true); // casos de la comunidad: lectura pública, sin sesión
@@ -248,7 +254,7 @@ function importarRiego(){
       const encontrados=Object.keys(x.origen).length;
       if(!encontrados&&x.declarados.noRevisa?.length)throw new ErrorLectura(`el archivo trae ${x.declarados.noRevisa.join(' y ')}, y la app todavía no lee esas tablas del archivo. Copia los datos en las secciones Hidráulica y Reservorio de la pestaña Riego.`);
       if(!encontrados)throw new ErrorLectura('No se reconoció ningún dato de riego. Revisa que las etiquetas estén junto a sus valores, o escríbelos a mano.');
-      S.riego={datos:x.datos,fuente:'archivo',archivo:file.name,origen:x.origen,declarados:x.declarados,faltan:x.faltan,omitidas:libro.omitidas||[]};
+      S.riego={datos:x.datos,fuente:'archivo',archivo:file.name,origen:x.origen,declarados:x.declarados,faltan:x.faltan,omitidas:libro.omitidas||[]};climaARiego();
       S.view='riego';
       S.msg=`Se leyeron ${encontrados} datos de ${file.name}.`;
     }catch(err){S.msg=`No se pudo leer ${file.name}: ${err instanceof ErrorLectura?err.message:'el archivo está dañado o no es compatible.'}`;}
